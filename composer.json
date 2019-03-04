@@ -37,7 +37,7 @@
         "sort-packages": true
     },
     "require-dev": {
-        "symfony/phpunit-bridge": "^4.1"
+        "symfony/phpunit-bridge": "^4.2.4"
     },
     "suggest": {
         "symfony/messenger": "To use the Messenger integration"
