@@ -28,10 +28,9 @@ final class Configuration implements ConfigurationInterface
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder();
-
-        $treeBuilder
-            ->root('mercure')
+        $treeBuilder = new TreeBuilder('mercure');
+        $rootNode = method_exists($treeBuilder, 'getRootNode') ? $treeBuilder->getRootNode() : $treeBuilder->root('mercure');
+        $rootNode
                 ->fixXmlConfig('hub')
                 ->children()
                     ->arrayNode('hubs')
