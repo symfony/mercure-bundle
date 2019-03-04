@@ -1,6 +1,6 @@
 build: false
 platform: x86
-clone_folder: c:\projects\symfony\panther
+clone_folder: c:\projects\symfony\mercure-bundle
 
 cache:
   - '%LOCALAPPDATA%\Composer\files'
@@ -8,7 +8,7 @@ cache:
 install:
   - ps: Set-Service wuauserv -StartupType Manual
   - refreshenv
-  - cd c:\tools\php72
+  - cd c:\tools\php73
   - copy php.ini-production php.ini /Y
   - echo date.timezone="UTC" >> php.ini
   - echo extension_dir=ext >> php.ini
