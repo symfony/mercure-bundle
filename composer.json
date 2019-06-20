@@ -20,7 +20,7 @@
         "symfony/config": "^3.4|^4.0",
         "symfony/dependency-injection": "^3.4|^4.0",
         "symfony/http-kernel": "^3.4|^4.0",
-        "symfony/mercure": "*"
+        "symfony/mercure": "^0.2"
     },
     "autoload": {
         "psr-4": { "Symfony\\Bundle\\MercureBundle\\": "src/" }

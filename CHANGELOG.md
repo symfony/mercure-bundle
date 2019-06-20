@@ -5,4 +5,3 @@ CHANGELOG
 -----
 
 * Fix a deprecation triggered by the `TreeBuilder`
-
