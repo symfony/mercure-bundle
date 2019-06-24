@@ -1,7 +1,6 @@
 parameters:
 	autoload_files:
-		- vendor/bin/.phpunit/phpunit-6.5/vendor/autoload.php
+		- vendor/bin/.phpunit/phpunit-7.4/vendor/autoload.php
 	ignoreErrors:
 		# Intended
 		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::.*\.#'
-

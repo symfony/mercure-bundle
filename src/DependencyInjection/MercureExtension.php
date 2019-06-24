@@ -15,6 +15,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
@@ -60,7 +61,8 @@ final class MercureExtension extends Extension
 
             $publisherDefinition = $container->register($hubId, Publisher::class)
                 ->addArgument($hub['url'])
-                ->addArgument(new Reference($jwtProvider));
+                ->addArgument(new Reference($jwtProvider))
+                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE));
 
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
