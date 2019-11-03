@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.1.3
+-----
+
+* Compatibility with Symfony 5
+
 0.1.2
 -----
 
