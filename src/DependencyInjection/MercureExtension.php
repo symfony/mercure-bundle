@@ -13,13 +13,18 @@ declare(strict_types=1);
 
 namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
+use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\Mercure\Debug\TraceablePublisher;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Publisher;
+use Symfony\Component\Mercure\PublisherInterface;
+use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -43,7 +48,9 @@ final class MercureExtension extends Extension
 
         $defaultHub = $config['default_hub'] ?? null;
         $hubUrls = [];
+        $publishers = [];
         $defaultHubUrl = null;
+        $enableProfiler = $config['enable_profiler'] && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             if (isset($hub['jwt'])) {
                 $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
@@ -67,9 +74,32 @@ final class MercureExtension extends Extension
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
             $publisherDefinition->addTag('messenger.message_handler', $attributes);
+
+            if ($enableProfiler) {
+                $container->register("$hubId.traceable", TraceablePublisher::class)
+                    ->setDecoratedService($hubId)
+                    ->addArgument(new Reference("$hubId.traceable.inner"))
+                    ->addArgument(new Reference('debug.stopwatch'));
+
+                $publishers[$name] = new Reference("$hubId.traceable");
+            }
         }
 
-        $container->setAlias(Publisher::class, $defaultHub);
+        if ($enableProfiler) {
+            $container->register('data_collector.mercure', MercureDataCollector::class)
+                ->addArgument(new IteratorArgument($publishers))
+                ->addTag('data_collector', [
+                    'template' => '@Mercure/Collector/mercure.html.twig',
+                    'id' => 'mercure',
+                ]);
+        }
+
+        $alias = $container->setAlias(Publisher::class, $defaultHub);
+        if (method_exists($alias, 'setDeprecated')) {
+            $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
+        }
+
+        $container->setAlias(PublisherInterface::class, $defaultHub);
         $container->setParameter('mercure.hubs', $hubUrls);
         $container->setParameter('mercure.default_hub', $defaultHubUrl);
     }
