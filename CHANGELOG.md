@@ -1,10 +1,12 @@
 CHANGELOG
 =========
 
-0.1.3
+0.2.0
 -----
 
 * Compatibility with Symfony 5
+* Add a profiler panel
+* Autowire `Symfony\Component\Mercure\PublisherInterface` instances (using `Symfony\Component\Mercure\Publisher` for autowiring is deprecated)
 
 0.1.2
 -----

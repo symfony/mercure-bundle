@@ -30,7 +30,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.0.x-dev"
+            "dev-master": "0.2.x-dev"
         }
     },
     "config": {
@@ -43,5 +43,6 @@
     },
     "suggest": {
         "symfony/messenger": "To use the Messenger integration"
-    }
+    },
+    "minimum-stability": "dev"
 }
