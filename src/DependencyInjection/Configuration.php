@@ -50,6 +50,7 @@ final class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                     ->scalarNode('default_hub')->end()
+                    ->booleanNode('enable_profiler')->info('Enable Symfony Web Profiler integration.')->defaultFalse()->end()
                 ->end()
             ->end()
         ;

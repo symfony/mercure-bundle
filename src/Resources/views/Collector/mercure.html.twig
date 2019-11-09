@@ -1,0 +1,82 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{% import _self as helper %}
+
+{% block toolbar %}
+    {% if collector.count > 0 %}
+        {% set icon %}
+            {{ include('@Mercure/Icon/mercure.svg') }}
+            <span class="sf-toolbar-value">{{ collector.count }}</span>
+        {% endset %}
+
+        {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', { link: 'mercure' }) }}
+    {% endif %}
+{% endblock %}
+
+{% block menu %}
+    <span class="label{{ collector.count == 0 ? ' disabled' }}">
+        <span class="icon">{{ include('@Mercure/Icon/mercure.svg') }}</span>
+        <strong>Mercure</strong>
+    </span>
+{% endblock %}
+
+{% block panel %}
+    {% import _self as helper %}
+
+    <h2>Messages</h2>
+
+    {% if collector.count == 0 %}
+        <div class="empty">
+            <p>No messages have been collected.</p>
+        </div>
+    {% else %}
+        <div class="sf-tabs">
+            {% for hub, publisher in collector.publishers %}
+                <div class="tab">
+                    <h3 class="tab-title">{{ hub }}<span class="badge">{{ publisher.count }}</span></h3>
+                    <div class="tab-content">
+                        <div class="metrics">
+                            <div class="metric">
+                                <span class="value">{{ '%.0f'|format(publisher.duration) }} <span class="unit">ms</span></span>
+                                <span class="label">Total execution time</span>
+                            </div>
+                            <div class="metric">
+                                <span class="value">{{ '%.2f'|format(publisher.memory / 1024 / 1024) }} <span class="unit">MB</span></span>
+                                <span class="label">Peak memory usage</span>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Time</th>
+                                <th>Memory</th>
+                                <th>Topics</th>
+                                <th>Data</th>
+                                <th>Targets</th>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Retry</th>
+                            </tr>
+                            </thead>
+                            {% for i, message in publisher.messages %}
+                                <tr>
+                                    <td class="font-normal text-small text-muted nowrap">{{ i + 1 }}</td>
+                                    <td class="nowrap">{{ '%.0f'|format(message.duration) }} ms</td>
+                                    <td class="nowrap">{{ '%.2f'|format(message.memory / 1024 / 1024) }} MB</td>
+                                    <td class="font-normal text-small text-bold nowrap">{{ message.object.topics|join(',') }}</td>
+                                    <td>{{ dump(message.object.data) }}</td>
+                                    <td class="font-normal text-small text-bold nowrap">{{ message.object.targets|join(',') }}</td>
+                                    <td class="nowrap">{{ message.object.id }}</td>
+                                    <td class="nowrap">{{ message.object.type }}</td>
+                                    <td class="nowrap">{{ message.object.retry }}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
