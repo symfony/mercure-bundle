@@ -36,7 +36,7 @@ final class MercureDataCollector extends DataCollector
             'count' => 0,
             'duration' => 0.0,
             'memory' => 0,
-            'publishers' => $this->publishers,
+            'publishers' => iterator_to_array($this->publishers),
         ];
 
         foreach ($this->publishers as $name => $publisher) {

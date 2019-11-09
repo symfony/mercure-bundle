@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.2.1
+-----
+
+* Fix a crash in `MercureDataCollector`
+
 0.2.0
 -----
 
