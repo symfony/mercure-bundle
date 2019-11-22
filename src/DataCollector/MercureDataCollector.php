@@ -30,7 +30,7 @@ final class MercureDataCollector extends DataCollector
         $this->publishers = $publishers;
     }
 
-    public function collect(Request $request, Response $response, \Exception $exception = null): void
+    public function collect(Request $request, Response $response, \Throwable $exception = null)
     {
         $this->data = [
             'count' => 0,
