@@ -95,9 +95,7 @@ final class MercureExtension extends Extension
         }
 
         $alias = $container->setAlias(Publisher::class, $defaultHub);
-        if (method_exists($alias, 'setDeprecated')) {
-            $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
-        }
+        $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
 
         $container->setAlias(PublisherInterface::class, $defaultHub);
         $container->setParameter('mercure.hubs', $hubUrls);
