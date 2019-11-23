@@ -36,8 +36,12 @@ final class MercureDataCollector extends DataCollector
             'count' => 0,
             'duration' => 0.0,
             'memory' => 0,
-            'publishers' => iterator_to_array($this->publishers),
+            'publishers' => [],
         ];
+
+        foreach ($this->publishers as $name => $publisher) {
+            $this->data['publishers'][$name]['messages'] = $publisher->getMessages();
+        }
 
         foreach ($this->publishers as $name => $publisher) {
             $this->data['duration'] += $publisher->getDuration();
