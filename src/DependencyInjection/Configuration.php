@@ -29,7 +29,7 @@ final class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('mercure');
-        $rootNode = method_exists($treeBuilder, 'getRootNode') ? $treeBuilder->getRootNode() : $treeBuilder->root('mercure');
+        $rootNode = $treeBuilder->getRootNode();
         $rootNode
                 ->fixXmlConfig('hub')
                 ->children()

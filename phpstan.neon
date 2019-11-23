@@ -1,6 +1,7 @@
 parameters:
+	inferPrivatePropertyTypeFromConstructor: true
 	autoload_files:
 		- vendor/bin/.phpunit/phpunit-8.3-0/vendor/autoload.php
 	ignoreErrors:
 		# Intended
-		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\TreeBuilder::root\(\)\.#'
+		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::fixXmlConfig\(\)\.#'
