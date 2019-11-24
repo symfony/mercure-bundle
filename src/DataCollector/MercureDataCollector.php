@@ -78,9 +78,6 @@ final class MercureDataCollector extends DataCollector
         return $this->data['memory'];
     }
 
-    /**
-     * @return TraceablePublisher[]
-     */
     public function getPublishers(): iterable
     {
         return $this->data['publishers'];
