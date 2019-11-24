@@ -40,10 +40,13 @@ final class MercureDataCollector extends DataCollector
         ];
 
         foreach ($this->publishers as $name => $publisher) {
-            $this->data['publishers'][$name]['messages'] = $publisher->getMessages();
-        }
+            $this->data['publishers'][$name] = [
+                'count' => $publisher->count(),
+                'duration' => $publisher->getDuration(),
+                'memory' => $publisher->getMemory(),
+                'messages' => $publisher->getMessages(),
+            ];
 
-        foreach ($this->publishers as $name => $publisher) {
             $this->data['duration'] += $publisher->getDuration();
             $this->data['memory'] += $publisher->getMemory();
             $this->data['count'] += \count($publisher->getMessages());
@@ -75,9 +78,6 @@ final class MercureDataCollector extends DataCollector
         return $this->data['memory'];
     }
 
-    /**
-     * @return TraceablePublisher[]
-     */
     public function getPublishers(): iterable
     {
         return $this->data['publishers'];
