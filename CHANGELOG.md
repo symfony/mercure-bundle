@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.2.3
+-----
+
+* Fix a bug preventing the profiler to work
+
 0.2.2
 -----
 
