@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\Compiler\AliasDeprecatedPublicServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
@@ -95,7 +96,13 @@ final class MercureExtension extends Extension
         }
 
         $alias = $container->setAlias(Publisher::class, $defaultHub);
-        $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
+
+        // Use the 5.1 signature for Alias::setDeprecated()
+        if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
+            $alias->setDeprecated('symfony/mercure-bundle', '0.2', 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
+        } else {
+            $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
+        }
 
         $container->setAlias(PublisherInterface::class, $defaultHub);
         $container->setParameter('mercure.hubs', $hubUrls);
