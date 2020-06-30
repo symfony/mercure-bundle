@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.2.5
+-----
+
+* Fix a bug in the debugger panel
+* Compatibility with Symfony 5.1
+
 0.2.4
 -----
 
