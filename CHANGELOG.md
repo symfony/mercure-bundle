@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.2.6
+-----
+
+* Expose privateness of published messages in profiler panel
+* Compatibility with PHP 8
+
 0.2.5
 -----
 
