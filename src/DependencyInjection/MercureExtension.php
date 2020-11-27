@@ -87,6 +87,8 @@ final class MercureExtension extends Extension
 
                 $publishers[$name] = new Reference("$hubId.traceable");
             }
+
+            $container->registerAliasForArgument($hubId, PublisherInterface::class, "{$name}Publisher");
         }
 
         if ($enableProfiler) {
