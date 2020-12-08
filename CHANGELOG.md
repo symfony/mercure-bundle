@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.2.7
+-----
+
+* Add `mercure.publisher` tag on publisher services
+
 0.2.6
 -----
 
