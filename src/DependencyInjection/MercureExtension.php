@@ -74,7 +74,10 @@ final class MercureExtension extends Extension
 
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
-            $publisherDefinition->addTag('messenger.message_handler', $attributes);
+
+            $publisherDefinition
+                ->addTag('messenger.message_handler', $attributes)
+                ->addTag('mercure.publisher');
 
             if ($enableProfiler) {
                 $container->register("$hubId.traceable", TraceablePublisher::class)

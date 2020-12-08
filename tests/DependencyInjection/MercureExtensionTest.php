@@ -42,6 +42,7 @@ class MercureExtensionTest extends TestCase
         $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt_provider'));
         $this->assertTrue($container->hasDefinition('mercure.hub.default.publisher'));
         $this->assertSame('https://demo.mercure.rocks/hub', $container->getDefinition('mercure.hub.default.publisher')->getArgument(0));
+        $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.default.publisher')->getTags());
         $this->assertSame('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU', $container->getDefinition('mercure.hub.default.jwt_provider')->getArgument(0));
         $this->assertSame(['default' => 'https://demo.mercure.rocks/hub'], $container->getParameter('mercure.hubs'));
         $this->assertSame('https://demo.mercure.rocks/hub', $container->getParameter('mercure.default_hub'));
