@@ -21,6 +21,12 @@ use Symfony\Component\Mercure\Debug\TraceablePublisher;
 final class MercureDataCollector extends DataCollector
 {
     private $publishers;
+    protected $data = [
+        'count' => 0,
+        'duration' => 0.0,
+        'memory' => 0,
+        'publishers' => [],
+    ];
 
     /**
      * @var TraceablePublisher[]
@@ -32,12 +38,7 @@ final class MercureDataCollector extends DataCollector
 
     public function collect(Request $request, Response $response, \Throwable $exception = null): void
     {
-        $this->data = [
-            'count' => 0,
-            'duration' => 0.0,
-            'memory' => 0,
-            'publishers' => [],
-        ];
+        $this->reset();
 
         foreach ($this->publishers as $name => $publisher) {
             $this->data['publishers'][$name] = [
@@ -55,7 +56,12 @@ final class MercureDataCollector extends DataCollector
 
     public function reset(): void
     {
-        $this->data = [];
+        $this->data = [
+            'count' => 0,
+            'duration' => 0.0,
+            'memory' => 0,
+            'publishers' => [],
+        ];
     }
 
     public function getName(): string
