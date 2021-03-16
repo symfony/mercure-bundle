@@ -89,7 +89,6 @@ final class MercureExtension extends Extension
                 } elseif (null === $tokenProvider) {
                     // 'secret' must be set.
                     $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
-
                     $container->register($tokenFactory, LcobucciFactory::class)->addArgument($hub['jwt']['secret']);
                 }
 
@@ -120,7 +119,7 @@ final class MercureExtension extends Extension
             $hubUrls[$name] = $hub['url'];
             $hubId = sprintf('mercure.hub.%s', $name);
             $publisherId = sprintf('mercure.hub.%s.publisher', $name);
-            if (!$defaultPublisher && $name === ($config['default_hub'] ?? $name)) {
+            if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHub = $hubId;
                 $defaultHubUrl = $hub['url'];
                 $defaultPublisher = $publisherId;

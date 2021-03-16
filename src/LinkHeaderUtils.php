@@ -45,7 +45,7 @@ final class LinkHeaderUtils
         }
 
         if (null !== $hub && !isset($this->hubs[$hub])) {
-            throw new InvalidArgumentException(sprintf('Invalid hub name "%s", expected one of "%s".', $hub, array_keys($this->hubs)));
+            throw new InvalidArgumentException(sprintf('Invalid hub name "%s", expected one of "%s".', $hub, implode('", "', array_keys($this->hubs))));
         }
 
         $hub = $hub ?? $this->defaultHub;
