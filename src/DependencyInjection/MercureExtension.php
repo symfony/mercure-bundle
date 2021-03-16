@@ -128,7 +128,9 @@ final class MercureExtension extends Extension
 
             $container->register($hubId, Hub::class)
                 ->addArgument($hub['url'])
-                ->addArgument(new Reference($tokenProvider));
+                ->addArgument(new Reference($tokenProvider))
+                ->addArgument($hub['public_url'])
+            ;
 
             $container->registerAliasForArgument($hubId, Hub::class, "{$name}Hub");
             $container->registerAliasForArgument($hubId, Hub::class, $name);

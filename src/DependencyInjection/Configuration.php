@@ -39,14 +39,15 @@ final class Configuration implements ConfigurationInterface
                         ->arrayPrototype()
                             ->children()
                                 ->scalarNode('url')->info('URL of the hub\'s publish endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
+                                ->scalarNode('public_url')->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->defaultNull()->end()
                                 ->arrayNode('jwt')
                                     ->beforeNormalization()
-                                    ->ifString()
-                                    ->then(static function (string $token): array {
-                                        return [
-                                            'value' => $token,
-                                        ];
-                                    })
+                                        ->ifString()
+                                        ->then(static function (string $token): array {
+                                            return [
+                                                'value' => $token,
+                                            ];
+                                        })
                                     ->end()
                                     ->info('JSON Web Token configuration.')
                                         ->children()

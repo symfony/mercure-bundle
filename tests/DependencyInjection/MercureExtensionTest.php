@@ -65,6 +65,7 @@ class MercureExtensionTest extends TestCase
                 'hubs' => [
                     'demo' => [
                         'url' => 'https://demo.mercure.rocks/hub',
+                        'public_url' => 'https://example.com/.well-known/mercure',
                         'jwt' => [
                             'value' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
                         ],
@@ -113,6 +114,7 @@ class MercureExtensionTest extends TestCase
         $this->assertFalse($container->hasDefinition('mercure.hub.demo.jwt.factory'));
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.demo.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['demo']['url'], $container->getDefinition('mercure.hub.demo')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['demo']['public_url'], $container->getDefinition('mercure.hub.demo')->getArgument(2));
         $this->assertSame($config['mercure']['hubs']['demo']['jwt']['value'], $container->getDefinition('mercure.hub.demo.jwt.provider')->getArgument(0));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Hub $demo', $container->getAliases());
