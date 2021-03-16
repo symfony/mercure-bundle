@@ -67,11 +67,15 @@ final class AuthorizationUtils
             ->withSameSite(Cookie::SAMESITE_STRICT);
 
         if (isset($urlComponents['host'])) {
-            $cookieDomain = $urlComponents['host'];
-            $currentDomain = $request->getHost();
+            $cookieDomain = strtolower($urlComponents['host']);
+            $currentDomain = strtolower($request->getHost());
 
-            if (!str_ends_with(strtolower($cookieDomain), strtolower($currentDomain))) {
-                throw new RuntimeException(sprintf('Unable to create authorization cookie for external domain "%s".', $currentDomain));
+            if ($cookieDomain === $currentDomain) {
+                return $cookie;
+            }
+
+            if (!str_ends_with($cookieDomain, ".${currentDomain}")) {
+                throw new RuntimeException(sprintf('Unable to create authorization cookie for external domain "%s".', $cookieDomain));
             }
 
             $cookie = $cookie->withDomain($cookieDomain);

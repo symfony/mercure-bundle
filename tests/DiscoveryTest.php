@@ -45,22 +45,22 @@ final class DiscoveryTest extends TestCase
         $discovery->addLink($request);
         $provider = $request->attributes->get('_links');
 
-        self::assertTrue($request->attributes->has('_links'));
-        self::assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
+        $this->assertTrue($request->attributes->has('_links'));
+        $this->assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
 
         $request = new Request();
         $discovery->addLink($request, 'default');
         $provider = $request->attributes->get('_links');
 
-        self::assertTrue($request->attributes->has('_links'));
-        self::assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
+        $this->assertTrue($request->attributes->has('_links'));
+        $this->assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
 
         $request = new Request();
         $discovery->addLink($request, 'managed');
         $provider = $request->attributes->get('_links');
 
-        self::assertTrue($request->attributes->has('_links'));
-        self::assertSame('https://demo.mercure.rocks/managed', $provider->getLinksByRel('mercure')[0]->getHref());
+        $this->assertTrue($request->attributes->has('_links'));
+        $this->assertSame('https://demo.mercure.rocks/managed', $provider->getLinksByRel('mercure')[0]->getHref());
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid hub name "announcements", expected one of "default", "managed".');
@@ -84,14 +84,14 @@ final class DiscoveryTest extends TestCase
 
         $discovery->addLink($request, 'default');
 
-        self::assertTrue($request->attributes->has('_links'));
+        $this->assertTrue($request->attributes->has('_links'));
 
         /** @var GenericLinkProvider $provider */
         $provider = $request->attributes->get('_links');
 
-        self::assertCount(1, $provider->getLinks());
-        self::assertCount(1, $provider->getLinksByRel('mercure'));
-        self::assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
+        $this->assertCount(1, $provider->getLinks());
+        $this->assertCount(1, $provider->getLinksByRel('mercure'));
+        $this->assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
     }
 
     public function testLinkAttributeIsAdded(): void
@@ -118,15 +118,15 @@ final class DiscoveryTest extends TestCase
 
         $discovery->addLink($request);
 
-        self::assertTrue($request->attributes->has('_links'));
+        $this->assertTrue($request->attributes->has('_links'));
 
         /** @var GenericLinkProvider $newProvider */
         $newProvider = $request->attributes->get('_links');
 
-        self::assertCount(4, $newProvider->getLinks());
-        self::assertCount(1, $newProvider->getLinksByRel('mercure'));
-        self::assertSame($provider->getLinksByRel('example'), $newProvider->getLinksByRel('example'));
-        self::assertSame('https://demo.mercure.rocks/hub', $newProvider->getLinksByRel('mercure')[0]->getHref());
+        $this->assertCount(4, $newProvider->getLinks());
+        $this->assertCount(1, $newProvider->getLinksByRel('mercure'));
+        $this->assertSame($provider->getLinksByRel('example'), $newProvider->getLinksByRel('example'));
+        $this->assertSame('https://demo.mercure.rocks/hub', $newProvider->getLinksByRel('mercure')[0]->getHref());
     }
 
     public function testLinkAttributeIsNotAddedToPreflightRequest(): void
@@ -147,7 +147,7 @@ final class DiscoveryTest extends TestCase
 
         $discovery->addLink($request);
 
-        self::assertFalse($request->attributes->has('_links'));
+        $this->assertFalse($request->attributes->has('_links'));
     }
 
     private function createDiscovery(array $configuration): Discovery
