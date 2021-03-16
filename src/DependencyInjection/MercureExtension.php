@@ -97,8 +97,8 @@ final class MercureExtension extends Extension
 
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
-                        ->addArgument($hub['jwt']['publish'] ?? [])
-                        ->addArgument($hub['jwt']['subscribe'] ?? []);
+                        ->addArgument($hub['jwt']['subscribe'] ?? [])
+                        ->addArgument($hub['jwt']['publish'] ?? []);
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
