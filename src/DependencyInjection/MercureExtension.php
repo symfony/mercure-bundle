@@ -57,7 +57,7 @@ final class MercureExtension extends Extension
         }
 
         $defaultPublisher = null;
-        $defaultHub = null;
+        $defaultHubId = null;
         $hubUrls = [];
         $traceablePublishers = [];
         $defaultHubUrl = null;
@@ -120,7 +120,8 @@ final class MercureExtension extends Extension
             $hubId = sprintf('mercure.hub.%s', $name);
             $publisherId = sprintf('mercure.hub.%s.publisher', $name);
             if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
-                $defaultHub = $hubId;
+                $defaultHubId = $hubId;
+                $defaultHubName = $name;
                 $defaultHubUrl = $hub['url'];
                 $defaultPublisher = $publisherId;
             }
@@ -178,9 +179,10 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(PublisherInterface::class, $defaultPublisher);
-        $container->setAlias(Hub::class, $defaultHub);
+        $container->setAlias(Hub::class, $defaultHubId);
 
         $container->register(LinkHeaderUtils::class)
+            ->addArgument($defaultHubName)
             ->addArgument('%mercure.hubs%');
 
         $container->setParameter('mercure.hubs', $hubUrls);
