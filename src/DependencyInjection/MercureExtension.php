@@ -13,10 +13,12 @@ declare(strict_types=1);
 
 namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
+use Symfony\Bundle\MercureBundle\AuthorizationUtils;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
-use Symfony\Bundle\MercureBundle\LinkHeaderUtils;
+use Symfony\Bundle\MercureBundle\Discovery;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
 use Symfony\Component\DependencyInjection\Compiler\AliasDeprecatedPublicServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -60,6 +62,8 @@ final class MercureExtension extends Extension
         $defaultHubId = null;
         $hubUrls = [];
         $traceablePublishers = [];
+        $hubs = [];
+        $tokenFactories = [];
         $defaultHubUrl = null;
         $defaultHubName = null;
         $enableProfiler = $config['enable_profiler'] && class_exists(Stopwatch::class);
@@ -69,7 +73,10 @@ final class MercureExtension extends Extension
                 if (isset($hub['jwt']['value'])) {
                     $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
 
-                    $container->register($tokenProvider, StaticTokenProvider::class)->addArgument($hub['jwt']['value']);
+                    $container->register($tokenProvider, StaticTokenProvider::class)
+                        ->addArgument($hub['jwt']['value'])
+                        ->addTag('mercure.jwt.provider')
+                    ;
 
                     // TODO: remove the following definition in 0.4
                     $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
@@ -82,23 +89,27 @@ final class MercureExtension extends Extension
                     }
                 } elseif (isset($hub['jwt']['provider'])) {
                     $tokenProvider = $hub['jwt']['provider'];
-                }
+                } else {
+                    if (isset($hub['jwt']['factory'])) {
+                        $tokenFactory = $hub['jwt']['factory'];
+                    } else {
+                        // 'secret' must be set.
+                        $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
+                        $container->register($tokenFactory, LcobucciFactory::class)
+                            ->addArgument($hub['jwt']['secret'])
+                            ->addTag('mercure.jwt.factory')
+                        ;
+                    }
 
-                if (isset($hub['jwt']['factory'])) {
-                    $tokenFactory = $hub['jwt']['factory'];
-                } elseif (null === $tokenProvider) {
-                    // 'secret' must be set.
-                    $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
-                    $container->register($tokenFactory, LcobucciFactory::class)->addArgument($hub['jwt']['secret']);
-                }
+                    $tokenFactories[$name] = new Reference($tokenFactory);
 
-                if (null === $tokenProvider) {
                     $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
-
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
                         ->addArgument($hub['jwt']['subscribe'] ?? [])
-                        ->addArgument($hub['jwt']['publish'] ?? []);
+                        ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addTag('mercure.jwt.factory')
+                    ;
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
@@ -109,7 +120,9 @@ final class MercureExtension extends Extension
                 $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
 
                 $container->register($tokenProvider, CallableTokenProvider::class)
-                    ->addArgument(new Reference($jwtProvider));
+                    ->addArgument(new Reference($jwtProvider))
+                    ->addTag('mercure.jwt.provider')
+                ;
             }
 
             $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, $name);
@@ -118,10 +131,11 @@ final class MercureExtension extends Extension
 
             $hubUrls[$name] = $hub['url'];
             $hubId = sprintf('mercure.hub.%s', $name);
+            $hubs[$name] = new Reference($hubId);
             $publisherId = sprintf('mercure.hub.%s.publisher', $name);
             if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
-                $defaultHubId = $hubId;
                 $defaultHubName = $name;
+                $defaultHubId = $hubId;
                 $defaultHubUrl = $hub['url'];
                 $defaultPublisher = $publisherId;
             }
@@ -130,6 +144,7 @@ final class MercureExtension extends Extension
                 ->addArgument($hub['url'])
                 ->addArgument(new Reference($tokenProvider))
                 ->addArgument($hub['public_url'])
+                ->addTag('mercure.hub')
             ;
 
             $container->registerAliasForArgument($hubId, Hub::class, "{$name}Hub");
@@ -183,10 +198,18 @@ final class MercureExtension extends Extension
         $container->setAlias(PublisherInterface::class, $defaultPublisher);
         $container->setAlias(Hub::class, $defaultHubId);
 
-        $container->register(LinkHeaderUtils::class)
+        $container->register(AuthorizationUtils::class)
             ->addArgument($defaultHubName)
-            ->addArgument('%mercure.hubs%');
+            ->addArgument(new ServiceLocatorArgument($hubs))
+            ->addArgument(new ServiceLocatorArgument($tokenFactories))
+        ;
 
+        $container->register(Discovery::class)
+            ->addArgument($defaultHubName)
+            ->addArgument(new ServiceLocatorArgument($hubs))
+        ;
+
+        // TODO: remove these parameters in the next release.
         $container->setParameter('mercure.hubs', $hubUrls);
         $container->setParameter('mercure.default_hub', $defaultHubUrl);
     }

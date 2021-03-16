@@ -17,16 +17,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mercure\Exception\InvalidArgumentException;
 use Symfony\Component\WebLink\GenericLinkProvider;
 use Symfony\Component\WebLink\Link;
+use Symfony\Contracts\Service\ServiceProviderInterface;
 
-final class LinkHeaderUtils
+final class Discovery
 {
+    private const MERCURE_AUTHORIZATION_COOKIE_NAME = 'mercureAuthorization';
+
     private $defaultHub;
     private $hubs;
 
-    /**
-     * @param string[] $hubs
-     */
-    public function __construct(string $defaultHub, array $hubs)
+    public function __construct(string $defaultHub, ServiceProviderInterface $hubs)
     {
         $this->defaultHub = $defaultHub;
         $this->hubs = $hubs;
@@ -34,22 +34,21 @@ final class LinkHeaderUtils
 
     /**
      * Add mercure link header to the given request.
-     *
-     * @param string|null $hub the hub name, if null, the default hub will be used
      */
-    public function add(Request $request, string $hub = null): void
+    public function addLink(Request $request, string $hub = null): void
     {
         // Prevent issues with NelmioCorsBundle
         if ($this->isPreflightRequest($request)) {
             return;
         }
 
-        if (null !== $hub && !isset($this->hubs[$hub])) {
-            throw new InvalidArgumentException(sprintf('Invalid hub name "%s", expected one of "%s".', $hub, implode('", "', array_keys($this->hubs))));
+        $hub = $hub ?? $this->defaultHub;
+
+        if (!$this->hubs->has($hub)) {
+            throw new InvalidArgumentException(sprintf('Invalid hub name "%s", expected one of "%s".', $hub, implode('", "', array_keys($this->hubs->getProvidedServices()))));
         }
 
-        $hub = $hub ?? $this->defaultHub;
-        $url = $this->hubs[$hub];
+        $url = $this->hubs->get($hub)->getPublicUrl();
         $link = new Link('mercure', $url);
 
         if (null === $linkProvider = $request->attributes->get('_links')) {

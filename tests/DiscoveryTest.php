@@ -15,59 +15,48 @@ namespace Symfony\Bundle\MercureBundle\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
-use Symfony\Bundle\MercureBundle\LinkHeaderUtils;
+use Symfony\Bundle\MercureBundle\Discovery;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mercure\Exception\InvalidArgumentException;
 use Symfony\Component\WebLink\GenericLinkProvider;
 use Symfony\Component\WebLink\Link;
 
-final class LinkHeaderUtilsTest extends TestCase
+final class DiscoveryTest extends TestCase
 {
     public function testService(): void
     {
-        $config = [
-            'mercure' => [
-                'hubs' => [
-                    [
-                        'name' => 'default',
-                        'url' => 'https://demo.mercure.rocks/hub',
-                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
-                    ],
-                    [
-                        'name' => 'managed',
-                        'url' => 'https://demo.mercure.rocks/managed',
-                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
-                    ],
+        $discovery = $this->createDiscovery([
+            'hubs' => [
+                [
+                    'name' => 'default',
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                ],
+                [
+                    'name' => 'managed',
+                    'url' => 'https://demo.mercure.rocks/managed',
+                    'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
                 ],
             ],
-        ];
-
-        $container = new ContainerBuilder();
-        (new MercureExtension())->load($config, $container);
-
-        self::assertTrue($container->hasDefinition(LinkHeaderUtils::class));
-        $container->getDefinition(LinkHeaderUtils::class)->setPublic(true);
-
-        $container->compile();
-        $linkHeaderUtils = $container->get(LinkHeaderUtils::class);
+        ]);
 
         $request = new Request();
-        $linkHeaderUtils->add($request);
+        $discovery->addLink($request);
         $provider = $request->attributes->get('_links');
 
         self::assertTrue($request->attributes->has('_links'));
         self::assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
 
         $request = new Request();
-        $linkHeaderUtils->add($request, 'default');
+        $discovery->addLink($request, 'default');
         $provider = $request->attributes->get('_links');
 
         self::assertTrue($request->attributes->has('_links'));
         self::assertSame('https://demo.mercure.rocks/hub', $provider->getLinksByRel('mercure')[0]->getHref());
 
         $request = new Request();
-        $linkHeaderUtils->add($request, 'managed');
+        $discovery->addLink($request, 'managed');
         $provider = $request->attributes->get('_links');
 
         self::assertTrue($request->attributes->has('_links'));
@@ -76,18 +65,24 @@ final class LinkHeaderUtilsTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid hub name "announcements", expected one of "default", "managed".');
 
-        $linkHeaderUtils->add($request, 'announcements');
+        $discovery->addLink($request, 'announcements');
     }
 
     public function testLinkAttributeIsSet(): void
     {
         $request = new Request();
 
-        $linkHeaderUtils = new LinkHeaderUtils('default', [
-            'default' => 'https://demo.mercure.rocks/hub',
+        $discovery = $this->createDiscovery([
+            'hubs' => [
+                [
+                    'name' => 'default',
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                ],
+            ],
         ]);
 
-        $linkHeaderUtils->add($request);
+        $discovery->addLink($request, 'default');
 
         self::assertTrue($request->attributes->has('_links'));
 
@@ -111,11 +106,17 @@ final class LinkHeaderUtilsTest extends TestCase
         $request = new Request();
         $request->attributes->set('_links', $provider);
 
-        $linkHeaderUtils = new LinkHeaderUtils('default', [
-            'default' => 'https://demo.mercure.rocks/hub',
+        $discovery = $this->createDiscovery([
+            'hubs' => [
+                [
+                    'name' => 'default',
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                ],
+            ],
         ]);
 
-        $linkHeaderUtils->add($request);
+        $discovery->addLink($request);
 
         self::assertTrue($request->attributes->has('_links'));
 
@@ -130,16 +131,33 @@ final class LinkHeaderUtilsTest extends TestCase
 
     public function testLinkAttributeIsNotAddedToPreflightRequest(): void
     {
+        $discovery = $this->createDiscovery([
+            'hubs' => [
+                [
+                    'name' => 'default',
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                ],
+            ],
+        ]);
+
         $request = new Request();
         $request->setMethod('OPTIONS');
         $request->headers->set('Access-Control-Request-Method', 'POST');
 
-        $linkHeaderUtils = new LinkHeaderUtils('default', [
-            'default' => 'https://demo.mercure.rocks/hub',
-        ]);
-
-        $linkHeaderUtils->add($request);
+        $discovery->addLink($request);
 
         self::assertFalse($request->attributes->has('_links'));
+    }
+
+    private function createDiscovery(array $configuration): Discovery
+    {
+        $container = new ContainerBuilder();
+        (new MercureExtension())->load(['mercure' => $configuration], $container);
+
+        $container->getDefinition(Discovery::class)->setPublic(true);
+        $container->compile();
+
+        return $container->get(Discovery::class);
     }
 }

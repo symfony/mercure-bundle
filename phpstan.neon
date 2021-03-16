@@ -9,7 +9,3 @@ parameters:
 	ignoreErrors:
 		# Intended
 		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::fixXmlConfig\(\)\.#'
-		-
-		    message: '#might not be defined#'
-		    count: 4
-		    path: src/DependencyInjection/MercureExtension.php
