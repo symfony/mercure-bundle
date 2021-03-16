@@ -39,10 +39,10 @@ final class AuthorizationUtils
      *
      * @param string[]    $subscribe        a list of topics that the authorization cookie will allow subscribing to
      * @param string[]    $publish          a list of topics that the authorization cookie will allow publishing to
-     * @param string|null $hub              the hub to generate the cookie for
      * @param mixed[]     $additionalClaims an array of additional claims for the JWT
+     * @param string|null $hub              the hub to generate the cookie for
      */
-    public function createCookie(Request $request, array $subscribe = [], array $publish = [], ?string $hub = null, array $additionalClaims = []): Cookie
+    public function createCookie(Request $request, array $subscribe = [], array $publish = [], array $additionalClaims = [], ?string $hub = null): Cookie
     {
         $hub = $hub ?? $this->defaultHub;
         if (!$this->hubs->has($hub)) {

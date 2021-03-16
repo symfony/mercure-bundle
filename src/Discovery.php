@@ -35,7 +35,7 @@ final class Discovery
     /**
      * Add mercure link header to the given request.
      */
-    public function addLink(Request $request, string $hub = null): void
+    public function addLink(Request $request, ?string $hub = null): void
     {
         // Prevent issues with NelmioCorsBundle
         if ($this->isPreflightRequest($request)) {
