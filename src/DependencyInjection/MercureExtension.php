@@ -64,61 +64,53 @@ final class MercureExtension extends Extension
         $defaultHubName = null;
         $enableProfiler = $config['enable_profiler'] && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
-            if (isset($hub['token'])) {
+            if (isset($hub['jwt'])) {
                 $tokenProvider = null;
-                if (isset($hub['token']['value'])) {
-                    // static.
-                    $tokenProvider = sprintf('mercure.hub.%s.token_provider', $name);
+                if (isset($hub['jwt']['value'])) {
+                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
 
-                    $container->register($tokenProvider, StaticTokenProvider::class)->addArgument($hub['token']['value']);
-                } elseif (isset($hub['token']['provider'])) {
-                    $tokenProvider = $hub['token']['provider'];
+                    $container->register($tokenProvider, StaticTokenProvider::class)->addArgument($hub['jwt']['value']);
+
+                    // TODO: remove the following definition in 0.4
+                    $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
+                    $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
+                        ->addArgument($hub['jwt']['value']);
+                    if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
+                        $jwtProviderDefinition->setDeprecated('symfony/mercure-bundle', '0.3', 'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.');
+                    } else {
+                        $jwtProviderDefinition->setDeprecated(true, 'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.');
+                    }
+                } elseif (isset($hub['jwt']['provider'])) {
+                    $tokenProvider = $hub['jwt']['provider'];
                 }
 
-                if (isset($hub['token']['factory'])) {
-                    $tokenFactory = $hub['token']['factory'];
+                if (isset($hub['jwt']['factory'])) {
+                    $tokenFactory = $hub['jwt']['factory'];
                 } elseif (null === $tokenProvider) {
                     // 'secret' must be set.
-                    $tokenFactory = sprintf('mercure.hub.%s.token_factory', $name);
+                    $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
 
-                    $container->register($tokenFactory, LcobucciFactory::class)->addArgument($hub['token']['secret']);
+                    $container->register($tokenFactory, LcobucciFactory::class)->addArgument($hub['jwt']['secret']);
                 }
 
                 if (null === $tokenProvider) {
-                    $tokenProvider = sprintf('mercure.hub.%s.token_provider', $name);
+                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
 
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
-                        ->addArgument($hub['token']['publish'] ?? [])
-                        ->addArgument($hub['token']['subscribe'] ?? []);
+                        ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addArgument($hub['jwt']['subscribe'] ?? []);
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}TokenFactory");
                 }
             } else {
-                // legacy.
-                if (isset($hub['jwt'])) {
-                    $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
-                    $tokenProvider = sprintf('mercure.hub.%s.token_provider', $name);
+                $jwtProvider = $hub['jwt_provider'];
+                $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
 
-                    $container->register($tokenProvider, StaticTokenProvider::class)
-                        ->addArgument($hub['jwt']);
-
-                    $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
-                        ->addArgument($hub['jwt']);
-                    if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
-                        $jwtProviderDefinition->setDeprecated('symfony/mercure-bundle', '0.3', 'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.');
-                    } else {
-                        $jwtProviderDefinition->setDeprecated(true, 'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.');
-                    }
-                } else {
-                    $jwtProvider = $hub['jwt_provider'];
-                    $tokenProvider = sprintf('mercure.hub.%s.token_provider', $name);
-
-                    $container->register($tokenProvider, CallableTokenProvider::class)
-                        ->addArgument(new Reference($jwtProvider));
-                }
+                $container->register($tokenProvider, CallableTokenProvider::class)
+                    ->addArgument(new Reference($jwtProvider));
             }
 
             $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, $name);

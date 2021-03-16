@@ -29,7 +29,7 @@ class MercureExtensionTest extends TestCase
                 'hubs' => [
                     'default' => [
                         'url' => 'https://demo.mercure.rocks/hub',
-                        'token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
                     ],
                 ],
             ],
@@ -40,10 +40,10 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default')); // Hub instance
         $this->assertTrue($container->hasDefinition('mercure.hub.default.publisher')); // Publisher
-        $this->assertTrue($container->hasDefinition('mercure.hub.default.token_provider'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt.provider'));
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.default.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['default']['url'], $container->getDefinition('mercure.hub.default')->getArgument(0));
-        $this->assertSame($config['mercure']['hubs']['default']['token'], $container->getDefinition('mercure.hub.default.token_provider')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['default']['jwt'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Hub $default', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $default', $container->getAliases());
@@ -65,13 +65,13 @@ class MercureExtensionTest extends TestCase
                 'hubs' => [
                     'demo' => [
                         'url' => 'https://demo.mercure.rocks/hub',
-                        'token' => [
+                        'jwt' => [
                             'value' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
                         ],
                     ],
                     'managed' => [
                         'url' => 'https://demo.mercure.rocks/managed',
-                        'token' => [
+                        'jwt' => [
                             'secret' => '!ChangeMe!',
                             'publish' => ['*'],
                             'subscribe' => 'https://example.com/book/1.jsonld',
@@ -86,13 +86,13 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.managed')); // Hub instance
         $this->assertTrue($container->hasDefinition('mercure.hub.managed.publisher')); // Publisher
-        $this->assertTrue($container->hasDefinition('mercure.hub.managed.token_provider'));
-        $this->assertTrue($container->hasDefinition('mercure.hub.managed.token_factory'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed.jwt.provider'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed.jwt.factory'));
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.managed.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['managed']['url'], $container->getDefinition('mercure.hub.managed')->getArgument(0));
-        $this->assertSame($config['mercure']['hubs']['managed']['token']['secret'], $container->getDefinition('mercure.hub.managed.token_factory')->getArgument(0));
-        $this->assertSame($config['mercure']['hubs']['managed']['token']['publish'], $container->getDefinition('mercure.hub.managed.token_provider')->getArgument(1));
-        $this->assertSame([$config['mercure']['hubs']['managed']['token']['subscribe']], $container->getDefinition('mercure.hub.managed.token_provider')->getArgument(2));
+        $this->assertSame($config['mercure']['hubs']['managed']['jwt']['secret'], $container->getDefinition('mercure.hub.managed.jwt.factory')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['managed']['jwt']['publish'], $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(1));
+        $this->assertSame([$config['mercure']['hubs']['managed']['jwt']['subscribe']], $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(2));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Hub $managed', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managed', $container->getAliases());
@@ -109,11 +109,11 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.demo')); // Hub instance
         $this->assertTrue($container->hasDefinition('mercure.hub.demo.publisher')); // Publisher
-        $this->assertTrue($container->hasDefinition('mercure.hub.demo.token_provider'));
-        $this->assertFalse($container->hasDefinition('mercure.hub.demo.token_factory'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.demo.jwt.provider'));
+        $this->assertFalse($container->hasDefinition('mercure.hub.demo.jwt.factory'));
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.demo.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['demo']['url'], $container->getDefinition('mercure.hub.demo')->getArgument(0));
-        $this->assertSame($config['mercure']['hubs']['demo']['token']['value'], $container->getDefinition('mercure.hub.demo.token_provider')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['demo']['jwt']['value'], $container->getDefinition('mercure.hub.demo.jwt.provider')->getArgument(0));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Hub $demo', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $demo', $container->getAliases());
