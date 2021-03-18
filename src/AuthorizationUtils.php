@@ -15,23 +15,17 @@ namespace Symfony\Bundle\MercureBundle;
 
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mercure\Exception\InvalidArgumentException;
 use Symfony\Component\Mercure\Exception\RuntimeException;
-use Symfony\Contracts\Service\ServiceProviderInterface;
 
 final class AuthorizationUtils
 {
     private const MERCURE_AUTHORIZATION_COOKIE_NAME = 'mercureAuthorization';
 
-    private $defaultHub;
-    private $hubs;
-    private $factories;
+    private $mercure;
 
-    public function __construct(string $defaultHub, ServiceProviderInterface $hubs, ServiceProviderInterface $factories)
+    public function __construct(Mercure $mercure)
     {
-        $this->defaultHub = $defaultHub;
-        $this->hubs = $hubs;
-        $this->factories = $factories;
+        $this->mercure = $mercure;
     }
 
     /**
@@ -44,18 +38,8 @@ final class AuthorizationUtils
      */
     public function createCookie(Request $request, array $subscribe = [], array $publish = [], array $additionalClaims = [], ?string $hub = null): Cookie
     {
-        $hub = $hub ?? $this->defaultHub;
-        if (!$this->hubs->has($hub)) {
-            throw new InvalidArgumentException(sprintf('Invalid hub name "%s", expected one of "%s".', $hub, implode('", "', array_keys($this->hubs->getProvidedServices()))));
-        }
-
-        if (!$this->factories->has($hub)) {
-            throw new InvalidArgumentException(sprintf('A token factory is not defined for hub "%s".', $hub));
-        }
-
-        $token = $this->factories->get($hub)->create($subscribe, $publish, $additionalClaims);
-
-        $url = $this->hubs->get($hub)->getPublicUrl();
+        $token = $this->mercure->getTokenFactory($hub)->create($subscribe, $publish, $additionalClaims);
+        $url = $this->mercure->getHub($hub)->getPublicUrl();
         /** @var array $urlComponents */
         $urlComponents = parse_url($url);
 

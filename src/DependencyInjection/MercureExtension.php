@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 use Symfony\Bundle\MercureBundle\AuthorizationUtils;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Bundle\MercureBundle\Discovery;
+use Symfony\Bundle\MercureBundle\Mercure;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
@@ -63,6 +64,7 @@ final class MercureExtension extends Extension
         $hubUrls = [];
         $traceablePublishers = [];
         $hubs = [];
+        $publishers = [];
         $tokenFactories = [];
         $defaultHubUrl = null;
         $defaultHubName = null;
@@ -131,8 +133,9 @@ final class MercureExtension extends Extension
 
             $hubUrls[$name] = $hub['url'];
             $hubId = sprintf('mercure.hub.%s', $name);
-            $hubs[$name] = new Reference($hubId);
             $publisherId = sprintf('mercure.hub.%s.publisher', $name);
+            $hubs[$name] = new Reference($hubId);
+            $publishers[$name] = new Reference($publisherId);
             if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
@@ -198,15 +201,19 @@ final class MercureExtension extends Extension
         $container->setAlias(PublisherInterface::class, $defaultPublisher);
         $container->setAlias(Hub::class, $defaultHubId);
 
-        $container->register(AuthorizationUtils::class)
+        $container->register(Mercure::class)
             ->addArgument($defaultHubName)
             ->addArgument(new ServiceLocatorArgument($hubs))
+            ->addArgument(new ServiceLocatorArgument($publishers))
             ->addArgument(new ServiceLocatorArgument($tokenFactories))
         ;
 
+        $container->register(AuthorizationUtils::class)
+            ->addArgument(new Reference(Mercure::class))
+        ;
+
         $container->register(Discovery::class)
-            ->addArgument($defaultHubName)
-            ->addArgument(new ServiceLocatorArgument($hubs))
+            ->addArgument(new Reference(Mercure::class))
         ;
 
         // TODO: remove these parameters in the next release.
