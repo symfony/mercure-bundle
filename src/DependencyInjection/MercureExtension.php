@@ -190,7 +190,7 @@ final class MercureExtension extends Extension
                     ->addArgument(new Reference("$publisherId.traceable.inner"))
                     ->addArgument(new Reference('debug.stopwatch'));
 
-                $this->deprecate($traceablePublisher, 'The "%alias_id%" service alias is deprecated. Use "'.$hubId.'.traceable" instead.');
+                $this->deprecate($traceablePublisher, 'The "%service_id%" service is deprecated. Use "'.$hubId.'.traceable" instead.');
 
                 $traceableHubs[$name] = new Reference("$publisherId.traceable");
 
