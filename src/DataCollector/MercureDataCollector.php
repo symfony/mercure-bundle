@@ -16,18 +16,19 @@ namespace Symfony\Bundle\MercureBundle\DataCollector;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
+use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Debug\TraceablePublisher;
 
 final class MercureDataCollector extends DataCollector
 {
-    private $publishers;
+    private $hubs;
 
     /**
-     * @var TraceablePublisher[]
+     * @var TraceablePublisher[]|TraceableHub[]
      */
-    public function __construct(iterable $publishers)
+    public function __construct(iterable $hubs)
     {
-        $this->publishers = $publishers;
+        $this->hubs = $hubs;
     }
 
     public function collect(Request $request, Response $response, \Throwable $exception = null): void
@@ -39,17 +40,17 @@ final class MercureDataCollector extends DataCollector
             'publishers' => [],
         ];
 
-        foreach ($this->publishers as $name => $publisher) {
-            $this->data['publishers'][$name] = [
-                'count' => $publisher->count(),
-                'duration' => $publisher->getDuration(),
-                'memory' => $publisher->getMemory(),
-                'messages' => $publisher->getMessages(),
+        foreach ($this->hubs as $name => $hub) {
+            $this->data['hubs'][$name] = [
+                'count' => $hub->count(),
+                'duration' => $hub->getDuration(),
+                'memory' => $hub->getMemory(),
+                'messages' => $hub->getMessages(),
             ];
 
-            $this->data['duration'] += $publisher->getDuration();
-            $this->data['memory'] += $publisher->getMemory();
-            $this->data['count'] += \count($publisher->getMessages());
+            $this->data['duration'] += $hub->getDuration();
+            $this->data['memory'] += $hub->getMemory();
+            $this->data['count'] += \count($hub->getMessages());
         }
     }
 
@@ -78,8 +79,18 @@ final class MercureDataCollector extends DataCollector
         return $this->data['memory'];
     }
 
+    public function getHubs(): iterable
+    {
+        return $this->data['hubs'];
+    }
+
+    /**
+     * @deprecated use {@see MercureDataCollector::getHubs()} instead
+     */
     public function getPublishers(): iterable
     {
-        return $this->data['publishers'];
+        trigger_deprecation('symfony/mercure-bundle', '0.3', 'Method "%s::getPublishers()" is deprecated, use "%s::getHubs()" instead.', __CLASS__, __CLASS__);
+
+        return $this->getHubs();
     }
 }
