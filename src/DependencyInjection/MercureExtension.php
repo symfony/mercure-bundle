@@ -15,14 +15,29 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Compiler\AliasDeprecatedPublicServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\Mercure\Authorization;
+use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Debug\TraceablePublisher;
+use Symfony\Component\Mercure\Discovery;
+use Symfony\Component\Mercure\Hub;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\HubRegistry;
+use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
+use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
+use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
+use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
+use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
+use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
+use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
@@ -47,70 +62,195 @@ final class MercureExtension extends Extension
             return;
         }
 
-        $defaultHub = $config['default_hub'] ?? null;
+        $defaultPublisher = null;
+        $defaultHubId = null;
         $hubUrls = [];
-        $publishers = [];
+        $traceableHubs = [];
+        $hubs = [];
         $defaultHubUrl = null;
+        $defaultHubName = null;
         $enableProfiler = $config['enable_profiler'] && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
+            $tokenFactory = null;
             if (isset($hub['jwt'])) {
-                $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
-                $container->register($jwtProvider, StaticJwtProvider::class)->addArgument($hub['jwt']);
+                $tokenProvider = null;
+                if (isset($hub['jwt']['value'])) {
+                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+
+                    $container->register($tokenProvider, StaticTokenProvider::class)
+                        ->addArgument($hub['jwt']['value'])
+                        ->addTag('mercure.jwt.provider')
+                    ;
+
+                    // TODO: remove the following definition in 0.4
+                    $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
+                    $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
+                        ->addArgument($hub['jwt']['value']);
+
+                    $this->deprecate(
+                        $jwtProviderDefinition,
+                        'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.'
+                    );
+                } elseif (isset($hub['jwt']['provider'])) {
+                    $tokenProvider = $hub['jwt']['provider'];
+                } else {
+                    if (isset($hub['jwt']['factory'])) {
+                        $tokenFactory = $hub['jwt']['factory'];
+                    } else {
+                        // 'secret' must be set.
+                        $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
+                        $container->register($tokenFactory, LcobucciFactory::class)
+                            ->addArgument($hub['jwt']['secret'])
+                            ->addTag('mercure.jwt.factory')
+                        ;
+                    }
+
+                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+                    $container->register($tokenProvider, FactoryTokenProvider::class)
+                        ->addArgument(new Reference($tokenFactory))
+                        ->addArgument($hub['jwt']['subscribe'] ?? [])
+                        ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addTag('mercure.jwt.factory')
+                    ;
+
+                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
+                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
+                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}TokenFactory");
+                }
             } else {
                 $jwtProvider = $hub['jwt_provider'];
+                $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+
+                $container->register($tokenProvider, CallableTokenProvider::class)
+                    ->addArgument(new Reference($jwtProvider))
+                    ->addTag('mercure.jwt.provider')
+                ;
             }
+
+            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, $name);
+            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}Provider");
+            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}TokenProvider");
 
             $hubUrls[$name] = $hub['url'];
-            $hubId = sprintf('mercure.hub.%s.publisher', $name);
-            if (!$defaultHub) {
+            $hubId = sprintf('mercure.hub.%s', $name);
+            $publisherId = sprintf('mercure.hub.%s.publisher', $name);
+            $hubs[$name] = new Reference($hubId);
+            if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
+                $defaultHubName = $name;
+                $defaultHubId = $hubId;
                 $defaultHubUrl = $hub['url'];
-                $defaultHub = $hubId;
+                $defaultPublisher = $publisherId;
             }
 
-            $publisherDefinition = $container->register($hubId, Publisher::class)
+            $container->register($hubId, Hub::class)
                 ->addArgument($hub['url'])
-                ->addArgument(new Reference($jwtProvider))
-                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE));
+                ->addArgument(new Reference($tokenProvider))
+                ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                ->addArgument($hub['public_url'])
+                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                ->addTag('mercure.hub')
+            ;
+
+            $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
+            $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+
+            $publisherDefinition = $container->register($publisherId, Publisher::class)
+                ->addArgument($hub['url'])
+                ->addArgument(new Reference($tokenProvider))
+                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                ->addTag('mercure.publisher')
+            ;
+
+            $this->deprecate(
+                $publisherDefinition,
+                'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+            );
+
+            $this->deprecate(
+                $container->registerAliasForArgument($publisherId, PublisherInterface::class, "{$name}Publisher"),
+                'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+            );
+
+            $this->deprecate(
+                $container->registerAliasForArgument($publisherId, PublisherInterface::class, $name),
+                'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+            );
 
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
 
-            $publisherDefinition
-                ->addTag('messenger.message_handler', $attributes)
-                ->addTag('mercure.publisher');
+            $messengerHandlerId = sprintf('mercure.hub.%s.message_handler', $name);
+            $container->register($messengerHandlerId, UpdateHandler::class)
+                ->addArgument(new Reference($hubId))
+                ->addTag('messenger.message_handler', $attributes);
 
             if ($enableProfiler) {
-                $container->register("$hubId.traceable", TraceablePublisher::class)
+                $traceablePublisher = $container->register("$publisherId.traceable", TraceablePublisher::class)
+                    ->setDecoratedService($publisherId)
+                    ->addArgument(new Reference("$publisherId.traceable.inner"))
+                    ->addArgument(new Reference('debug.stopwatch'));
+
+                $this->deprecate($traceablePublisher, 'The "%alias_id%" service alias is deprecated. Use "'.$hubId.'.traceable" instead.');
+
+                $traceableHubs[$name] = new Reference("$publisherId.traceable");
+
+                $container->register("$hubId.traceable", TraceableHub::class)
                     ->setDecoratedService($hubId)
                     ->addArgument(new Reference("$hubId.traceable.inner"))
                     ->addArgument(new Reference('debug.stopwatch'));
 
-                $publishers[$name] = new Reference("$hubId.traceable");
+                $traceableHubs[$name] = new Reference("$hubId.traceable");
             }
-
-            $container->registerAliasForArgument($hubId, PublisherInterface::class, "{$name}Publisher");
         }
 
         if ($enableProfiler) {
             $container->register('data_collector.mercure', MercureDataCollector::class)
-                ->addArgument(new IteratorArgument($publishers))
+                ->addArgument(new IteratorArgument($traceableHubs))
                 ->addTag('data_collector', [
                     'template' => '@Mercure/Collector/mercure.html.twig',
                     'id' => 'mercure',
                 ]);
         }
 
-        $alias = $container->setAlias(Publisher::class, $defaultHub);
+        $container->setAlias(HubInterface::class, $defaultHubId);
 
-        // Use the 5.1 signature for Alias::setDeprecated()
-        if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
-            $alias->setDeprecated('symfony/mercure-bundle', '0.2', 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
-        } else {
-            $alias->setDeprecated(true, 'The "%alias_id%" service alias is deprecated. Use "'.PublisherInterface::class.'" instead.');
-        }
+        $this->deprecate(
+            $container->setAlias(Publisher::class, $defaultPublisher),
+            'The "%alias_id%" service alias is deprecated. Use "'.Hub::class.'" instead.'
+        );
 
-        $container->setAlias(PublisherInterface::class, $defaultHub);
+        $this->deprecate(
+            $container->setAlias(PublisherInterface::class, $defaultPublisher),
+            'The "%alias_id%" service alias is deprecated. Use "'.HubInterface::class.'" instead.'
+        );
+
+        $container->register(HubRegistry::class)
+            ->addArgument(new Reference($defaultHubId))
+            ->addArgument($hubs)
+        ;
+
+        $container->register(Authorization::class)
+            ->addArgument(new Reference(HubRegistry::class))
+        ;
+
+        $container->register(Discovery::class, Discovery::class)
+            ->addArgument(new Reference(HubRegistry::class))
+        ;
+
+        // TODO: remove these parameters in the next release.
         $container->setParameter('mercure.hubs', $hubUrls);
         $container->setParameter('mercure.default_hub', $defaultHubUrl);
+    }
+
+    /**
+     * @param Definition|Alias $definition
+     */
+    private function deprecate($definition, string $message): void
+    {
+        if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
+            $definition->setDeprecated('symfony/mercure-bundle', '0.2', $message);
+        } else {
+            $definition->setDeprecated(true, $message);
+        }
     }
 }

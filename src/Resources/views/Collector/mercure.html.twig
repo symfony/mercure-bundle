@@ -31,17 +31,17 @@
         </div>
     {% else %}
         <div class="sf-tabs">
-            {% for hub, publisher in collector.publishers %}
+            {% for name, data in collector.hubs %}
                 <div class="tab">
-                    <h3 class="tab-title">{{ hub }}<span class="badge">{{ publisher.count }}</span></h3>
+                    <h3 class="tab-title">{{ name }}<span class="badge">{{ data.count }}</span></h3>
                     <div class="tab-content">
                         <div class="metrics">
                             <div class="metric">
-                                <span class="value">{{ '%.0f'|format(publisher.duration) }} <span class="unit">ms</span></span>
+                                <span class="value">{{ '%.0f'|format(data.duration) }} <span class="unit">ms</span></span>
                                 <span class="label">Total execution time</span>
                             </div>
                             <div class="metric">
-                                <span class="value">{{ '%.2f'|format(publisher.memory / 1024 / 1024) }} <span class="unit">MB</span></span>
+                                <span class="value">{{ '%.2f'|format(data.memory / 1024 / 1024) }} <span class="unit">MB</span></span>
                                 <span class="label">Peak memory usage</span>
                             </div>
                         </div>
@@ -60,7 +60,7 @@
                                 <th>Retry</th>
                             </tr>
                             </thead>
-                            {% for i, message in publisher.messages %}
+                            {% for i, message in data.messages %}
                                 <tr>
                                     <td class="font-normal text-small text-muted nowrap">{{ i + 1 }}</td>
                                     <td class="nowrap">{{ '%.0f'|format(message.duration) }} ms</td>
