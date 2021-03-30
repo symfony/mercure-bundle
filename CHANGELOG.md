@@ -5,6 +5,7 @@ CHANGELOG
 -----
 
 * Add `mercure.publisher` tag on publisher services
+* Add integration with `symfony/ux-turbo`
 
 0.2.6
 -----
