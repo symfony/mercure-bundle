@@ -1,11 +1,13 @@
 CHANGELOG
 =========
 
-0.2.7
+0.3.0
 -----
 
-* Add `mercure.publisher` tag on publisher services
+* Upgrade to `symfony/mercure` 0.5
 * Add integration with `symfony/ux-turbo`
+* Register autowiring aliases for hubs
+* Add `mercure.publisher` tag on publisher services
 
 0.2.6
 -----
