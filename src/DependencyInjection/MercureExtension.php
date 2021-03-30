@@ -41,6 +41,8 @@ use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
+use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
+use Symfony\UX\Turbo\Bridge\Mercure\TurboStreamListenRenderer;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -200,6 +202,24 @@ final class MercureExtension extends Extension
                     ->addArgument(new Reference('debug.stopwatch'));
 
                 $traceableHubs[$name] = new Reference("$hubId.traceable");
+            }
+
+            if (\PHP_VERSION_ID >= 80000 && class_exists(Broadcaster::class)) {
+                $container->register("turbo.mercure.{$name}.renderer", TurboStreamListenRenderer::class)
+                    ->addArgument(new Reference($hubId))
+                    ->addArgument(new Reference('webpack_encore.twig_stimulus_extension'))
+                    ->addArgument(new Reference('turbo.id_accessor'))
+                    ->addTag('turbo.renderer.stream_listen', ['transport' => $name]);
+
+                if ($defaultHubName === $name && 'default' !== $name) {
+                    $container->getDefinition("turbo.mercure.{$name}.renderer")
+                        ->addTag('turbo.renderer.stream_listen', ['transport' => 'default']);
+                }
+
+                $container->register("turbo.mercure.{$name}.broadcaster", Broadcaster::class)
+                    ->addArgument($name)
+                    ->addArgument(new Reference($hubId))
+                    ->addTag('turbo.broadcaster');
             }
         }
 
