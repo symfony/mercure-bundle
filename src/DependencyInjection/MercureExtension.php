@@ -204,7 +204,7 @@ final class MercureExtension extends Extension
                 $traceableHubs[$name] = new Reference("$hubId.traceable");
             }
 
-            if (\PHP_VERSION_ID >= 80000 && class_exists(Broadcaster::class)) {
+            if (class_exists(Broadcaster::class)) {
                 $container->register("turbo.mercure.{$name}.renderer", TurboStreamListenRenderer::class)
                     ->addArgument(new Reference($hubId))
                     ->addArgument(new Reference('webpack_encore.twig_stimulus_extension'))
