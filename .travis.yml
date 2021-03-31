@@ -2,13 +2,13 @@ language: php
 
 jobs:
   include:
-    - php: '7.1'
+    - php: '7.2'
     - php: '7.3'
     - php: '7.4'
+    - php: '8.0'
       env: lint=1
-    - php: '7.4'
+    - php: '8.0'
       env: deps=low
-    - php: '8.0snapshot'
 
 cache:
   directories:
@@ -16,8 +16,8 @@ cache:
 
 before_install:
   - if [[ $lint = '1' ]]; then composer require --no-update --dev lcobucci/jwt:^4.0; fi
-  - if [[ $lint = '1' ]]; then wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v2.16.3/php-cs-fixer.phar; fi
-  - if [[ $lint = '1' ]]; then wget https://github.com/phpstan/phpstan/releases/download/0.12.25/phpstan.phar; fi
+  - if [[ $lint = '1' ]]; then wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v2.18.4/php-cs-fixer.phar; fi
+  - if [[ $lint = '1' ]]; then wget https://github.com/phpstan/phpstan/releases/download/0.12.82/phpstan.phar; fi
 
 before_script:
   - phpenv config-rm xdebug.ini
