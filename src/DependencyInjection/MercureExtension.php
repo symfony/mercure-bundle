@@ -99,14 +99,12 @@ final class MercureExtension extends Extension
                     if (isset($hub['jwt']['factory'])) {
                         $tokenFactory = $hub['jwt']['factory'];
                     } else {
-                        $defaultLifetime = $hub['jwt']['default_lifetime'] ?? $container->get('session.storage.options', ContainerInterface::NULL_ON_INVALID_REFERENCE)['cookie_lifetime'] ?? null;
 
                         // 'secret' must be set.
                         $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
                         $container->register($tokenFactory, LcobucciFactory::class)
                             ->addArgument($hub['jwt']['secret'])
                             ->addArgument($hub['jwt']['algorithm'])
-                            ->addArgument($defaultLifetime)
                             ->addTag('mercure.jwt.factory')
                         ;
                     }
@@ -255,6 +253,7 @@ final class MercureExtension extends Extension
 
         $container->register(Authorization::class)
             ->addArgument(new Reference(HubRegistry::class))
+            ->addArgument($config['default_lifetime'] ?? $container->get('session.storage.options', ContainerInterface::NULL_ON_INVALID_REFERENCE)['cookie_lifetime'] ?? null)
         ;
 
         $container->register(Discovery::class, Discovery::class)
