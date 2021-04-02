@@ -99,7 +99,6 @@ final class MercureExtension extends Extension
                     if (isset($hub['jwt']['factory'])) {
                         $tokenFactory = $hub['jwt']['factory'];
                     } else {
-
                         // 'secret' must be set.
                         $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
                         $container->register($tokenFactory, LcobucciFactory::class)
