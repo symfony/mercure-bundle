@@ -250,13 +250,9 @@ final class MercureExtension extends Extension
             ->addArgument($hubs)
         ;
 
-        if (!$cookieLifetime = $config['default_lifetime'] ?? null) {
-            $cookieLifetime = $container->hasParameter('session.storage.options') ? ($container->getParameter('session.storage.options')['cookie_lifetime'] ?? null) : null;
-        }
-
         $container->register(Authorization::class)
             ->addArgument(new Reference(HubRegistry::class))
-            ->addArgument($cookieLifetime)
+            ->addArgument($config['default_cookie_lifetime'])
         ;
 
         $container->register(Discovery::class, Discovery::class)
