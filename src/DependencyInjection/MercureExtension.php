@@ -103,6 +103,7 @@ final class MercureExtension extends Extension
                         $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
                         $container->register($tokenFactory, LcobucciFactory::class)
                             ->addArgument($hub['jwt']['secret'])
+                            ->addArgument($hub['jwt']['algorithm'])
                             ->addTag('mercure.jwt.factory')
                         ;
                     }
@@ -251,6 +252,7 @@ final class MercureExtension extends Extension
 
         $container->register(Authorization::class)
             ->addArgument(new Reference(HubRegistry::class))
+            ->addArgument($config['default_cookie_lifetime'])
         ;
 
         $container->register(Discovery::class, Discovery::class)
