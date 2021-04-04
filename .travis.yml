@@ -3,7 +3,9 @@ language: php
 jobs:
   include:
     - php: '7.2'
+      env: lcobucci=0
     - php: '7.3'
+      env: lcobucci=0
     - php: '7.4'
     - php: '8.0'
       env: lint=1
@@ -15,7 +17,7 @@ cache:
     - $HOME/.composer/cache
 
 before_install:
-  - if [[ $lint = '1' ]]; then composer require --no-update --dev lcobucci/jwt:^4.0; fi
+  - if [[ $lcobucci = '0' ]]; then composer remove --no-update lcobucci/jwt; fi
   - if [[ $lint = '1' ]]; then wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v2.18.4/php-cs-fixer.phar; fi
   - if [[ $lint = '1' ]]; then wget https://github.com/phpstan/phpstan/releases/download/0.12.82/phpstan.phar; fi
 
