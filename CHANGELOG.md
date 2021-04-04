@@ -1,10 +1,16 @@
 CHANGELOG
 =========
 
+0.3.2
+-----
+
+* Full compatibility with PHP 7.1
+* Enable JWT support by default
+
 0.3.1
 -----
 
-* Add a configuration option to set a defaut expiration for the JWT and the cookie when using the `Authorization` class
+* Add a configuration option to set a default expiration for the JWT and the cookie when using the `Authorization` class
 
 0.3.0
 -----
