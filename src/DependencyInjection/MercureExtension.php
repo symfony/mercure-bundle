@@ -71,7 +71,7 @@ final class MercureExtension extends Extension
         $hubs = [];
         $defaultHubUrl = null;
         $defaultHubName = null;
-        $enableProfiler = $config['enable_profiler'] && class_exists(Stopwatch::class);
+        $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $tokenFactory = null;
             if (isset($hub['jwt'])) {

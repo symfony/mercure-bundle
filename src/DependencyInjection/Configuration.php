@@ -88,7 +88,7 @@ final class Configuration implements ConfigurationInterface
                     ->end()
                     ->scalarNode('default_hub')->end()
                     ->integerNode('default_cookie_lifetime')->defaultNull()->info('Default lifetime of the cookie containing the JWT, in seconds. Defaults to the value of "framework.session.cookie_lifetime".')->end()
-                    ->booleanNode('enable_profiler')->info('Enable Symfony Web Profiler integration.')->defaultFalse()->end()
+                    ->booleanNode('enable_profiler')->info('Enable Symfony Web Profiler integration.')->setDeprecated('symfony/mercure-bundle', '0.3')->end()
                 ->end()
             ->end()
         ;
