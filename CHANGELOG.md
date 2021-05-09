@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.3.3
+-----
+
+* Deprecate `enable_profiler` configuration
+
 0.3.2
 -----
 

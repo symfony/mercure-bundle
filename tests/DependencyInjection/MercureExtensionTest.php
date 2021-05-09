@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\Tests\DependencyInjection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\HubRegistry;
 
 /**
@@ -36,7 +37,7 @@ class MercureExtensionTest extends TestCase
             ],
         ];
 
-        $container = new ContainerBuilder();
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
         (new MercureExtension())->load($config, $container);
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default')); // Hub instance
@@ -83,7 +84,7 @@ class MercureExtensionTest extends TestCase
             ],
         ];
 
-        $container = new ContainerBuilder();
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
         (new MercureExtension())->load($config, $container);
 
         $this->assertTrue($container->hasDefinition('mercure.hub.managed')); // Hub instance
@@ -154,7 +155,7 @@ class MercureExtensionTest extends TestCase
             ],
         ];
 
-        $container = new ContainerBuilder();
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
         (new MercureExtension())->load($config, $container);
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt_provider'));
