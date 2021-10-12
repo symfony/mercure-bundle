@@ -5,6 +5,8 @@ CHANGELOG
 -----
 
 * Deprecate `enable_profiler` configuration
+* Add support for Mercure Component 0.6
+* Compatibility with Symfony 6.0
 
 0.3.2
 -----
