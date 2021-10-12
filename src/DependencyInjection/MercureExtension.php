@@ -267,7 +267,7 @@ final class MercureExtension extends Extension
                 ->addTag('kernel.event_subscriber', ['priority' => -10]);
         }
 
-        if (class_exists(TwigMercureExtension::class) && class_exists(Environment::class)) {
+        if (class_exists(Environment::class) && class_exists(TwigMercureExtension::class)) {
             $container->register(TwigMercureExtension::class)
                 ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')])
                 ->addTag('twig.extension');
