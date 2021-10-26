@@ -8,6 +8,10 @@ jobs:
 
     runs-on: ${{ matrix.operating-system }}
 
+    env:
+      COMPOSER_ROOT_VERSION: 'dev-main'
+      SYMFONY_DEPRECATIONS_HELPER: max[self]=0
+
     strategy:
       matrix:
         dependencies:
@@ -42,13 +46,17 @@ jobs:
           key: "php-${{ matrix.php-version }}-${{ matrix.operating-system }}"
           restore-keys: "php-${{ matrix.php-version }}-${{ matrix.operating-system }}"
 
+      - name: "removing symfony/ux-turbo-mercure on PHP 7.1"
+        if: ${{ matrix.php-version == '7.1' }}
+        run: "composer remove symfony/ux-turbo-mercure --no-update --dev"
+
       - name: "installing lowest dependencies"
         if: ${{ matrix.dependencies == 'lowest' }}
-        run: "composer update --prefer-lowest --no-interaction --no-progress --no-suggest"
+        run: "composer update --prefer-lowest --no-interaction --no-progress"
 
       - name: "installing highest dependencies"
         if: ${{ matrix.dependencies == 'highest' }}
-        run: "composer update --no-interaction --no-progress --no-suggest"
+        run: "composer update --no-interaction --no-progress"
 
       - name: "installing phpunit"
         run: "php vendor/bin/simple-phpunit install"
