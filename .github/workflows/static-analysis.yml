@@ -20,7 +20,9 @@ jobs:
           tools: composer:v2, phpstan, cs2pr
 
       - name: "installing dependencies"
-        run: "composer update --no-interaction --no-progress --no-suggest"
+        run: "COMPOSER_ROOT_VERSION=dev-main composer update --no-interaction --no-progress"
+        env:
+          COMPOSER_ROOT_VERSION: 'dev-main'
 
       - name: "installing phpunit"
         run: "php vendor/bin/simple-phpunit install"
