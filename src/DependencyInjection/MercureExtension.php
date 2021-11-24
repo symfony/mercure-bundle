@@ -107,6 +107,8 @@ final class MercureExtension extends Extension
                         $container->register($tokenFactory, LcobucciFactory::class)
                             ->addArgument($hub['jwt']['secret'])
                             ->addArgument($hub['jwt']['algorithm'])
+                            ->addArgument(null)
+                            ->addArgument($hub['jwt']['passphrase'])
                             ->addTag('mercure.jwt.factory')
                         ;
                     }
@@ -286,6 +288,7 @@ final class MercureExtension extends Extension
         if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
             $definition->setDeprecated('symfony/mercure-bundle', '0.2', $message);
         } else {
+            /* @phpstan-ignore-next-line */
             $definition->setDeprecated(true, $message);
         }
     }

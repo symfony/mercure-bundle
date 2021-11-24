@@ -21,10 +21,13 @@ use Symfony\Component\Mercure\Debug\TraceablePublisher;
 
 final class MercureDataCollector extends DataCollector
 {
+    /**
+     * @var iterable<TraceablePublisher|TraceableHub>
+     */
     private $hubs;
 
     /**
-     * @var TraceablePublisher[]|TraceableHub[]
+     * @param iterable<TraceablePublisher|TraceableHub> $hubs
      */
     public function __construct(iterable $hubs)
     {
