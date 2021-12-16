@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.3.4
+-----
+
+* Add support for JWT signers requiring a passphrase
+* Throw an exception if neither the `jwt` nor the `jwt_provider` configuration key is defined.
+
 0.3.3
 -----
 
