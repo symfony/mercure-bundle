@@ -65,6 +65,7 @@ final class Configuration implements ConfigurationInterface
                                                 ->info('A list of topics to allow subscribing to when using the given factory to generate the JWT.')
                                             ->end()
                                             ->scalarNode('secret')->info('The JWT Secret to use.')->example('!ChangeMe!')->end()
+                                            ->scalarNode('passphrase')->info('The JWT secret passphrase.')->defaultValue('')->end()
                                             ->scalarNode('algorithm')->info('The algorithm to use to sign the JWT')->defaultValue('hmac.sha256')->end()
                                         ->end()
                                 ->end()

@@ -80,6 +80,16 @@ class MercureExtensionTest extends TestCase
                             'subscribe' => 'https://example.com/book/1.jsonld',
                         ],
                     ],
+                    'managed2' => [
+                        'url' => 'https://demo.mercure.rocks/managed',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!',
+                            'algorithm' => 'rsa.sha512',
+                            'passphrase' => 'test',
+                            'publish' => ['*'],
+                            'subscribe' => 'https://example.com/book/1.jsonld',
+                        ],
+                    ],
                 ],
             ],
         ];
@@ -109,6 +119,31 @@ class MercureExtensionTest extends TestCase
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $managedTokenProvider', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $managedTokenFactory', $container->getAliases());
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed2')); // Hub instance
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed2.publisher')); // Publisher
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed2.jwt.provider'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.managed2.jwt.factory'));
+        $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.managed2.publisher')->getTags());
+        $this->assertSame($config['mercure']['hubs']['managed2']['url'], $container->getDefinition('mercure.hub.managed2')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['secret'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(0));
+        $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['algorithm'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(1));
+        $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['passphrase'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(3));
+        $this->assertSame([$config['mercure']['hubs']['managed2']['jwt']['subscribe']], $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(1));
+        $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['publish'], $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(2));
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $managed2', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managed2', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $managed2', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $managed2', $container->getAliases());
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $managed2Hub', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managed2Publisher', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $managed2Provider', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $managed2Factory', $container->getAliases());
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $managed2TokenProvider', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $managed2TokenFactory', $container->getAliases());
 
         $this->assertTrue($container->hasDefinition('mercure.hub.demo')); // Hub instance
         $this->assertTrue($container->hasDefinition('mercure.hub.demo.publisher')); // Publisher
