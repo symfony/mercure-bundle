@@ -31,6 +31,10 @@ final class MercureBundle extends Bundle
         $container->addCompilerPass(new class() implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void
             {
+                if (!$container->hasDefinition(Authorization::class)) {
+                    return;
+                }
+
                 $definition = $container->getDefinition(Authorization::class);
                 if (
                     null === $definition->getArgument(1) &&
