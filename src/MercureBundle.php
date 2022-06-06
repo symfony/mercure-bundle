@@ -31,13 +31,17 @@ final class MercureBundle extends Bundle
         $container->addCompilerPass(new class() implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void
             {
+                if (!$container->hasDefinition(Authorization::class)) {
+                    return;
+                }
+
                 $definition = $container->getDefinition(Authorization::class);
                 if (
                     null === $definition->getArgument(1) &&
                     $container->hasParameter('session.storage.options')
                 ) {
                     $definition->setArgument(
-                        2,
+                        1,
                         $container->getParameter('session.storage.options')['cookie_lifetime'] ?? null
                     );
                 }
