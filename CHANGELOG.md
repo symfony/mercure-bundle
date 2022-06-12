@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.3.5
+-----
+
+* Use the right argument index for `Authorization` cookie lifetime
+
 0.3.4
 -----
 
