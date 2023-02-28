@@ -41,7 +41,8 @@
     "require-dev": {
         "symfony/phpunit-bridge": "^4.3.7|^5.0|^6.0",
         "symfony/stopwatch": "^4.3.7|^5.0|^6.0",
-        "symfony/ux-turbo-mercure": "*",
+        "symfony/twig-bundle": "^4.3.7|^5.0|^6.0",
+        "symfony/ux-turbo": "^2.6.1",
         "symfony/var-dumper": "^4.3.7|^5.0|^6.0"
     },
     "suggest": {
