@@ -48,9 +48,9 @@ jobs:
           key: "php-${{ matrix.php-version }}-${{ matrix.operating-system }}"
           restore-keys: "php-${{ matrix.php-version }}-${{ matrix.operating-system }}"
 
-      - name: "removing symfony/ux-turbo-mercure on PHP 7.1"
+      - name: "removing symfony/ux-turbo on PHP 7.1"
         if: ${{ matrix.php-version == '7.1' }}
-        run: "composer remove symfony/ux-turbo-mercure --no-update --dev"
+        run: "composer remove symfony/ux-turbo --no-update --dev"
 
       - name: "installing lowest dependencies"
         if: ${{ matrix.dependencies == 'lowest' }}
