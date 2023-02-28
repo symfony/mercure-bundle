@@ -15,10 +15,10 @@ jobs:
       - name: "installing PHP"
         uses: "shivammathur/setup-php@v2"
         with:
-          php-version: "8.0"
+          php-version: "8.1"
 
       - name: "installing php-cs-fixer"
-        run: "wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v3.0.0/php-cs-fixer.phar"
+        run: "wget https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/v3.14.4/php-cs-fixer.phar"
 
       - name: "running php-cs-fixer"
         run: "php php-cs-fixer.phar fix --dry-run --diff --no-ansi"
