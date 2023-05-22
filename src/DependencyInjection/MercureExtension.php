@@ -213,7 +213,8 @@ final class MercureExtension extends Extension
             if (class_exists(Broadcaster::class)) {
                 $container->register("turbo.mercure.{$name}.renderer", TurboStreamListenRenderer::class)
                     ->addArgument(new Reference($hubId))
-                    ->addArgument(new Reference('webpack_encore.twig_stimulus_extension'))
+                    // uses an alias dynamically registered in a compiler pass
+                    ->addArgument(new Reference('turbo.mercure.stimulus_helper'))
                     ->addArgument(new Reference('turbo.id_accessor'))
                     ->addTag('turbo.renderer.stream_listen', ['transport' => $name]);
 
