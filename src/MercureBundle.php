@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Symfony\Bundle\MercureBundle;
 
+use Symfony\Bundle\MercureBundle\DependencyInjection\CompilerPass\StimulusHelperPass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -27,6 +28,8 @@ final class MercureBundle extends Bundle
     public function build(ContainerBuilder $container): void
     {
         parent::build($container);
+
+        $container->addCompilerPass(new StimulusHelperPass());
 
         $container->addCompilerPass(new class() implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void
