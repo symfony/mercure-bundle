@@ -32,10 +32,10 @@ final class StimulusHelperPass implements CompilerPassInterface
             return;
         }
 
-        if ($container->hasDefinition('stimulus.helper')) {
-            $id = 'stimulus.helper';
-        } else {
+        if ($container->hasDefinition('webpack_encore.twig_stimulus_extension')) {
             $id = 'webpack_encore.twig_stimulus_extension';
+        } else {
+            $id = 'stimulus.helper';
         }
         $container->setAlias('turbo.mercure.stimulus_helper', new Alias($id));
     }
