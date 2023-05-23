@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-0.4.0
+0.3.7
 -----
 
 * Support for `symfony/ux-turbo` 2.9 using `symfony/stimulus-bundle`
