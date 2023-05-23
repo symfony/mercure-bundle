@@ -26,7 +26,7 @@ use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
  */
 final class StimulusHelperPass implements CompilerPassInterface
 {
-    public function process(ContainerBuilder $container)
+    public function process(ContainerBuilder $container): void
     {
         if (!class_exists(Broadcaster::class)) {
             return;
