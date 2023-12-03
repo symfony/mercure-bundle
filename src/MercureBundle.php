@@ -40,8 +40,8 @@ final class MercureBundle extends Bundle
 
                 $definition = $container->getDefinition(Authorization::class);
                 if (
-                    null === $definition->getArgument(1) &&
-                    $container->hasParameter('session.storage.options')
+                    null === $definition->getArgument(1)
+                    && $container->hasParameter('session.storage.options')
                 ) {
                     $definition->setArgument(
                         1,
