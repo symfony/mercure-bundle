@@ -50,9 +50,9 @@ class MercureBundleTest extends TestCase
         // prevent unused services removal/inlining and missing optional services errors
         $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), function (CompilerPassInterface $pass) {
             return !(
-                $pass instanceof RemoveUnusedDefinitionsPass ||
-                $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass ||
-                $pass instanceof InlineServiceDefinitionsPass
+                $pass instanceof RemoveUnusedDefinitionsPass
+                || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
+                || $pass instanceof InlineServiceDefinitionsPass
             );
         }));
 
@@ -75,9 +75,9 @@ class MercureBundleTest extends TestCase
         // prevent unused services removal/inlining and missing optional services errors
         $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), function (CompilerPassInterface $pass) {
             return !(
-                $pass instanceof RemoveUnusedDefinitionsPass ||
-                $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass ||
-                $pass instanceof InlineServiceDefinitionsPass
+                $pass instanceof RemoveUnusedDefinitionsPass
+                || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
+                || $pass instanceof InlineServiceDefinitionsPass
             );
         }));
 

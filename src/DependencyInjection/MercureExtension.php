@@ -52,9 +52,6 @@ use Twig\Environment;
  */
 final class MercureExtension extends Extension
 {
-    /**
-     * {@inheritdoc}
-     */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = $this->getConfiguration($configs, $container);
