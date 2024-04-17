@@ -34,7 +34,7 @@ final class MercureDataCollector extends DataCollector
         $this->hubs = $hubs;
     }
 
-    public function collect(Request $request, Response $response, \Throwable $exception = null): void
+    public function collect(Request $request, Response $response, ?\Throwable $exception = null): void
     {
         $this->data = [
             'count' => 0,

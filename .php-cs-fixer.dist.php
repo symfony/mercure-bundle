@@ -41,6 +41,7 @@ return (new PhpCsFixer\Config)
         'strict_param' => true,
         'ternary_to_null_coalescing' => true,
         'native_function_invocation' => ['include' => ['@compiler_optimized'], 'scope' => 'namespaced'],
+        'nullable_type_declaration_for_default_null_value' => true,
     ])
     ->setFinder($finder)
 ;
