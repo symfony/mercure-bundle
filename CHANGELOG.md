@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.3.9
+-----
+
+* Explicitly mark method parameters as nullable
+* Adapt icon to profiler redesign
+
 0.3.8
 -----
 
