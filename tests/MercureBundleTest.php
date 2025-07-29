@@ -26,7 +26,7 @@ use Symfony\Component\Mercure\Authorization;
 
 class MercureBundleTest extends TestCase
 {
-    public function testBuildSetsAuthorizationCookieLifetime(): void
+    public function testBuildSetsAuthorizationCookieLifetime()
     {
         $config = [
             'mercure' => [
@@ -61,7 +61,7 @@ class MercureBundleTest extends TestCase
         $this->assertSame(60, $container->getDefinition(Authorization::class)->getArgument(1));
     }
 
-    public function testBuildSkipsSettingAuthorizationCookieLifetimeIfNotWired(): void
+    public function testBuildSkipsSettingAuthorizationCookieLifetimeIfNotWired()
     {
         $config = ['mercure' => ['hubs' => []]];
 

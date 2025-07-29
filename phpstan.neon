@@ -7,5 +7,10 @@ parameters:
 	bootstrapFiles:
 		- vendor/bin/.phpunit/phpunit/vendor/autoload.php
 	ignoreErrors:
+		-
+			message: "#^Method .*::test.*\\(\\) has no return type specified\\.$#"
+			reportUnmatched: false
+			paths:
+				- tests/*
 		# Intended
 		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::fixXmlConfig\(\)\.#'

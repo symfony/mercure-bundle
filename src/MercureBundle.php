@@ -31,7 +31,7 @@ final class MercureBundle extends Bundle
 
         $container->addCompilerPass(new StimulusHelperPass());
 
-        $container->addCompilerPass(new class() implements CompilerPassInterface {
+        $container->addCompilerPass(new class implements CompilerPassInterface {
             public function process(ContainerBuilder $container): void
             {
                 if (!$container->hasDefinition(Authorization::class)) {

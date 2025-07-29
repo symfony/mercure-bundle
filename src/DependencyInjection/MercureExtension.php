@@ -77,7 +77,7 @@ final class MercureExtension extends Extension
             if (isset($hub['jwt'])) {
                 $tokenProvider = null;
                 if (isset($hub['jwt']['value'])) {
-                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
 
                     $container->register($tokenProvider, StaticTokenProvider::class)
                         ->addArgument($hub['jwt']['value'])
@@ -85,7 +85,7 @@ final class MercureExtension extends Extension
                     ;
 
                     // TODO: remove the following definition in 0.4
-                    $jwtProvider = sprintf('mercure.hub.%s.jwt_provider', $name);
+                    $jwtProvider = \sprintf('mercure.hub.%s.jwt_provider', $name);
                     $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
                         ->addArgument($hub['jwt']['value']);
 
@@ -100,7 +100,7 @@ final class MercureExtension extends Extension
                         $tokenFactory = $hub['jwt']['factory'];
                     } else {
                         // 'secret' must be set.
-                        $tokenFactory = sprintf('mercure.hub.%s.jwt.factory', $name);
+                        $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
                         $container->register($tokenFactory, LcobucciFactory::class)
                             ->addArgument($hub['jwt']['secret'])
                             ->addArgument($hub['jwt']['algorithm'])
@@ -110,7 +110,7 @@ final class MercureExtension extends Extension
                         ;
                     }
 
-                    $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
                         ->addArgument($hub['jwt']['subscribe'] ?? [])
@@ -124,7 +124,7 @@ final class MercureExtension extends Extension
                 }
             } else {
                 $jwtProvider = $hub['jwt_provider'];
-                $tokenProvider = sprintf('mercure.hub.%s.jwt.provider', $name);
+                $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
 
                 $container->register($tokenProvider, CallableTokenProvider::class)
                     ->addArgument(new Reference($jwtProvider))
@@ -137,8 +137,8 @@ final class MercureExtension extends Extension
             $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}TokenProvider");
 
             $hubUrls[$name] = $hub['url'];
-            $hubId = sprintf('mercure.hub.%s', $name);
-            $publisherId = sprintf('mercure.hub.%s.publisher', $name);
+            $hubId = \sprintf('mercure.hub.%s', $name);
+            $publisherId = \sprintf('mercure.hub.%s.publisher', $name);
             $hubs[$name] = new Reference($hubId);
             if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
@@ -184,7 +184,7 @@ final class MercureExtension extends Extension
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
 
-            $messengerHandlerId = sprintf('mercure.hub.%s.message_handler', $name);
+            $messengerHandlerId = \sprintf('mercure.hub.%s.message_handler', $name);
             $container->register($messengerHandlerId, UpdateHandler::class)
                 ->addArgument(new Reference($hubId))
                 ->addTag('messenger.message_handler', $attributes);

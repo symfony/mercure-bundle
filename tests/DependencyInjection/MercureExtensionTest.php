@@ -24,7 +24,7 @@ use Symfony\Component\Mercure\HubRegistry;
  */
 class MercureExtensionTest extends TestCase
 {
-    public function testExtensionMinimum(): void
+    public function testExtensionMinimum()
     {
         $config = [
             'mercure' => [
@@ -59,7 +59,7 @@ class MercureExtensionTest extends TestCase
         $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $defaultTokenFactory', $container->getAliases());
     }
 
-    public function testExtension(): void
+    public function testExtension()
     {
         $config = [
             'mercure' => [
