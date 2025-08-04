@@ -213,6 +213,7 @@ final class MercureExtension extends Extension
                     // uses an alias dynamically registered in a compiler pass
                     ->addArgument(new Reference('turbo.mercure.stimulus_helper'))
                     ->addArgument(new Reference('turbo.id_accessor'))
+                    ->addArgument(new Reference('twig'))
                     ->addTag('turbo.renderer.stream_listen', ['transport' => $name]);
 
                 if ($defaultHubName === $name && 'default' !== $name) {
