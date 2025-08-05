@@ -18,11 +18,11 @@
     "require": {
         "php": ">=7.1.3",
         "lcobucci/jwt": "^3.4|^4.0|^5.0",
-        "symfony/config": "^4.4|^5.0|^6.0|^7.0",
-        "symfony/dependency-injection": "^4.4|^5.4|^6.0|^7.0",
-        "symfony/http-kernel": "^4.4|^5.0|^6.0|^7.0",
+        "symfony/config": "^4.4|^5.0|^6.0|^7.0|^8.0",
+        "symfony/dependency-injection": "^4.4|^5.4|^6.0|^7.0|^8.0",
+        "symfony/http-kernel": "^4.4|^5.0|^6.0|^7.0|^8.0",
         "symfony/mercure": "^0.6.1",
-        "symfony/web-link": "^4.4|^5.0|^6.0|^7.0"
+        "symfony/web-link": "^4.4|^5.0|^6.0|^7.0|^8.0"
     },
     "autoload": {
         "psr-4": { "Symfony\\Bundle\\MercureBundle\\": "src/" }
@@ -39,10 +39,10 @@
         "sort-packages": true
     },
     "require-dev": {
-        "symfony/phpunit-bridge": "^4.3.7|^5.0|^6.0|^7.0",
-        "symfony/stopwatch": "^4.3.7|^5.0|^6.0|^7.0",
+        "symfony/phpunit-bridge": "^4.3.7|^5.0|^6.0|^7.0|^8.0",
+        "symfony/stopwatch": "^4.3.7|^5.0|^6.0|^7.0|^8.0",
         "symfony/ux-turbo": "*",
-        "symfony/var-dumper": "^4.3.7|^5.0|^6.0|^7.0"
+        "symfony/var-dumper": "^4.3.7|^5.0|^6.0|^7.0|^8.0"
     },
     "suggest": {
         "symfony/messenger": "To use the Messenger integration"
