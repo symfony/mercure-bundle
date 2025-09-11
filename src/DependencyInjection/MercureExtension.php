@@ -250,6 +250,7 @@ final class MercureExtension extends Extension
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))
+            ->setLazy(true)
             ->addArgument($hubs)
         ;
 
