@@ -158,7 +158,6 @@ final class MercureExtension extends Extension
                     ->addArgument($hub['public_url'])
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addTag('mercure.hub');
-
             } else {
                 $container->register($hubId, Hub::class)
                     ->addArgument($hub['url'])

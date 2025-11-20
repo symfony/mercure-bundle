@@ -213,6 +213,5 @@ class MercureExtensionTest extends TestCase
 
     public function testExtensionBuiltin()
     {
-
     }
 }
