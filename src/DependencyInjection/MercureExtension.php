@@ -110,6 +110,12 @@ final class MercureExtension extends Extension
                         ;
                     }
 
+                    $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
+                        ->setFactory(['Closure', 'fromCallable'])
+                        ->addArgument([new Reference($tokenFactory), 'create'])
+                    ;
+                    $tokenFactory = '.lazy.'.$tokenFactory;
+
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
