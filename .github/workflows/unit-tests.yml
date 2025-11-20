@@ -2,6 +2,9 @@ name: "unit tests"
 
 on: ["pull_request", "push"]
 
+permissions:
+  contents: read
+
 jobs:
   unit-tests:
     name: "unit tests"
@@ -27,7 +30,9 @@ jobs:
 
     steps:
       - name: "checkout"
-        uses: "actions/checkout@v4"
+        uses: "actions/checkout@v5"
+        with:
+          persist-credentials: false
 
       - name: "installing PHP"
         uses: "shivammathur/setup-php@v2"
@@ -37,7 +42,7 @@ jobs:
           tools: composer:v2, cs2pr
 
       - name: "caching dependencies"
-        uses: "actions/cache@v3"
+        uses: "actions/cache@v4"
         with:
           path: |
             ~/.composer/cache
