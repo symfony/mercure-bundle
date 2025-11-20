@@ -12,5 +12,3 @@ parameters:
 			reportUnmatched: false
 			paths:
 				- tests/*
-		# Intended
-		- '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::fixXmlConfig\(\)\.#'
