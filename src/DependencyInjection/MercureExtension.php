@@ -28,6 +28,7 @@ use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Debug\TraceablePublisher;
 use Symfony\Component\Mercure\Discovery;
 use Symfony\Component\Mercure\EventSubscriber\SetCookieSubscriber;
+use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
@@ -66,23 +67,22 @@ final class MercureExtension extends Extension
 
         $defaultPublisher = null;
         $defaultHubId = null;
-        $hubUrls = [];
         $traceableHubs = [];
         $hubs = [];
-        $defaultHubUrl = null;
         $defaultHubName = null;
         $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
+            $builtinHub = !isset($hub['url']);
+
             $tokenFactory = null;
+            $tokenProvider = null;
             if (isset($hub['jwt'])) {
-                $tokenProvider = null;
                 if (isset($hub['jwt']['value'])) {
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
 
                     $container->register($tokenProvider, StaticTokenProvider::class)
                         ->addArgument($hub['jwt']['value'])
-                        ->addTag('mercure.jwt.provider')
-                    ;
+                        ->addTag('mercure.jwt.provider');
 
                     // TODO: remove the following definition in 0.4
                     $jwtProvider = \sprintf('mercure.hub.%s.jwt_provider', $name);
@@ -106,14 +106,12 @@ final class MercureExtension extends Extension
                             ->addArgument($hub['jwt']['algorithm'])
                             ->addArgument(null)
                             ->addArgument($hub['jwt']['passphrase'])
-                            ->addTag('mercure.jwt.factory')
-                        ;
+                            ->addTag('mercure.jwt.factory');
                     }
 
                     $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
                         ->setFactory(['Closure', 'fromCallable'])
-                        ->addArgument([new Reference($tokenFactory), 'create'])
-                    ;
+                        ->addArgument([new Reference($tokenFactory), 'create']);
                     $tokenFactory = '.lazy.'.$tokenFactory;
 
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
@@ -121,71 +119,81 @@ final class MercureExtension extends Extension
                         ->addArgument(new Reference($tokenFactory))
                         ->addArgument($hub['jwt']['subscribe'] ?? [])
                         ->addArgument($hub['jwt']['publish'] ?? [])
-                        ->addTag('mercure.jwt.factory')
-                    ;
+                        ->addTag('mercure.jwt.factory');
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
-                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}TokenFactory");
+                    $container->registerAliasForArgument(
+                        $tokenFactory,
+                        TokenFactoryInterface::class,
+                        "{$name}TokenFactory"
+                    );
                 }
-            } else {
+            } elseif (isset($hub['jwt_provider'])) {
                 $jwtProvider = $hub['jwt_provider'];
                 $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
 
                 $container->register($tokenProvider, CallableTokenProvider::class)
                     ->addArgument(new Reference($jwtProvider))
-                    ->addTag('mercure.jwt.provider')
-                ;
+                    ->addTag('mercure.jwt.provider');
             }
 
-            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, $name);
-            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}Provider");
-            $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}TokenProvider");
+            if (null !== $tokenProvider) {
+                $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, $name);
+                $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}Provider");
+                $container->registerAliasForArgument($tokenProvider, TokenProviderInterface::class, "{$name}TokenProvider");
+            }
 
-            $hubUrls[$name] = $hub['url'];
             $hubId = \sprintf('mercure.hub.%s', $name);
             $publisherId = \sprintf('mercure.hub.%s.publisher', $name);
             $hubs[$name] = new Reference($hubId);
             if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
-                $defaultHubUrl = $hub['url'];
                 $defaultPublisher = $publisherId;
             }
 
-            $container->register($hubId, Hub::class)
-                ->addArgument($hub['url'])
-                ->addArgument(new Reference($tokenProvider))
-                ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
-                ->addArgument($hub['public_url'])
-                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
-                ->addTag('mercure.hub')
-            ;
+            if ($builtinHub) {
+                $container->register($hubId, FrankenPhpHub::class)
+                    ->addArgument($hub['public_url'])
+                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                    ->addTag('mercure.hub');
 
-            $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
-            $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+            } else {
+                $container->register($hubId, Hub::class)
+                    ->addArgument($hub['url'])
+                    ->addArgument(new Reference($tokenProvider))
+                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                    ->addArgument($hub['public_url'])
+                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addTag('mercure.hub');
+            }
 
-            $publisherDefinition = $container->register($publisherId, Publisher::class)
-                ->addArgument($hub['url'])
-                ->addArgument(new Reference($tokenProvider))
-                ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
-                ->addTag('mercure.publisher')
-            ;
+            if (!$builtinHub) {
+                $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
+                $container->registerAliasForArgument($hubId, HubInterface::class, $name);
 
-            $this->deprecate(
-                $publisherDefinition,
-                'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-            );
+                $publisherDefinition = $container->register($publisherId, Publisher::class)
+                    ->addArgument($hub['url'])
+                    ->addArgument(new Reference($tokenProvider))
+                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addTag('mercure.publisher');
 
-            $this->deprecate(
-                $container->registerAliasForArgument($publisherId, PublisherInterface::class, "{$name}Publisher"),
-                'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-            );
+                $this->deprecate(
+                    $publisherDefinition,
+                    'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
 
-            $this->deprecate(
-                $container->registerAliasForArgument($publisherId, PublisherInterface::class, $name),
-                'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-            );
+                $this->deprecate(
+                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, "{$name}Publisher"),
+                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
+
+                $this->deprecate(
+                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, $name),
+                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
+            }
 
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
@@ -196,14 +204,19 @@ final class MercureExtension extends Extension
                 ->addTag('messenger.message_handler', $attributes);
 
             if ($enableProfiler) {
-                $traceablePublisher = $container->register("$publisherId.traceable", TraceablePublisher::class)
-                    ->setDecoratedService($publisherId)
-                    ->addArgument(new Reference("$publisherId.traceable.inner"))
-                    ->addArgument(new Reference('debug.stopwatch'));
+                if (!$builtinHub) {
+                    $traceablePublisher = $container->register("$publisherId.traceable", TraceablePublisher::class)
+                        ->setDecoratedService($publisherId)
+                        ->addArgument(new Reference("$publisherId.traceable.inner"))
+                        ->addArgument(new Reference('debug.stopwatch'));
 
-                $this->deprecate($traceablePublisher, 'The "%service_id%" service is deprecated. Use "'.$hubId.'.traceable" instead.');
+                    $this->deprecate(
+                        $traceablePublisher,
+                        'The "%service_id%" service is deprecated. Use "'.$hubId.'.traceable" instead.'
+                    );
 
-                $traceableHubs[$name] = new Reference("$publisherId.traceable");
+                    $traceableHubs[$name] = new Reference("$publisherId.traceable");
+                }
 
                 $container->register("$hubId.traceable", TraceableHub::class)
                     ->setDecoratedService($hubId)
@@ -245,15 +258,17 @@ final class MercureExtension extends Extension
 
         $container->setAlias(HubInterface::class, $defaultHubId);
 
-        $this->deprecate(
-            $container->setAlias(Publisher::class, $defaultPublisher),
-            'The "%alias_id%" service alias is deprecated. Use "'.Hub::class.'" instead.'
-        );
+        if (null !== $defaultPublisher) {
+            $this->deprecate(
+                $container->setAlias(Publisher::class, $defaultPublisher),
+                'The "%alias_id%" service alias is deprecated. Use "'.Hub::class.'" instead.'
+            );
 
-        $this->deprecate(
-            $container->setAlias(PublisherInterface::class, $defaultPublisher),
-            'The "%alias_id%" service alias is deprecated. Use "'.HubInterface::class.'" instead.'
-        );
+            $this->deprecate(
+                $container->setAlias(PublisherInterface::class, $defaultPublisher),
+                'The "%alias_id%" service alias is deprecated. Use "'.HubInterface::class.'" instead.'
+            );
+        }
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))
@@ -279,10 +294,6 @@ final class MercureExtension extends Extension
                 ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')])
                 ->addTag('twig.extension');
         }
-
-        // TODO: remove these parameters in the next release.
-        $container->setParameter('mercure.hubs', $hubUrls);
-        $container->setParameter('mercure.default_hub', $defaultHubUrl);
     }
 
     /**

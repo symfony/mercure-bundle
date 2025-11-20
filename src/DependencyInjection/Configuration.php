@@ -25,9 +25,12 @@ final class Configuration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder(): TreeBuilder
     {
+        $builtinPublish = function_exists('mercure_publish');
+
         $treeBuilder = new TreeBuilder('mercure');
         $rootNode = $treeBuilder->getRootNode();
-        $rootNode
+
+        $urlNode = $rootNode
                 ->fixXmlConfig('hub')
                 ->children()
                     ->arrayNode('hubs')
@@ -35,8 +38,20 @@ final class Configuration implements ConfigurationInterface
                         ->normalizeKeys(false)
                         ->arrayPrototype()
                             ->children()
-                                ->scalarNode('url')->info('URL of the hub\'s publish endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
-                                ->scalarNode('public_url')->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->defaultNull()->end()
+                                ->scalarNode('url')->info('URL of the hub\'s publish endpoint')->example('https://demo.mercure.rocks/.well-known/mercure');
+
+                                if ($builtinPublish) {
+                                    $urlNode->defaultNull();
+                                }
+
+                                $publicUrlNode = $urlNode->end()
+                                ->scalarNode('public_url')->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure');
+
+                                if (!$builtinPublish) {
+                                    $publicUrlNode->defaultNull();
+                                }
+
+                                $publicUrlNode->end()
                                 ->arrayNode('jwt')
                                     ->beforeNormalization()
                                         ->ifString()
@@ -77,7 +92,7 @@ final class Configuration implements ConfigurationInterface
                                 ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
                             ->end()
                             ->validate()
-                                ->ifTrue(function ($v) { return !isset($v['jwt']) && !isset($v['jwt_provider']); })
+                                ->ifTrue(function ($v) { return isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']); })
                                 ->thenInvalid('You must specify at least one of "jwt", and "jwt_provider".')
                             ->end()
                             ->validate()
