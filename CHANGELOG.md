@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.4.0
+-----
+
+* Add support for FrankenPHP's `mercure_publish()` function
+* Allow Symfony 8
+* Compatibility with PHP 8.5
+* Pass Twig as dependency of `TurboStreamListenRenderer`
+* Fix cache warmup without JWT secrets
+* Drop support for unmaintained PHP and Symfony versions
+
 0.3.9
 -----
 
