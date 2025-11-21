@@ -47,6 +47,7 @@ use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
 use Symfony\UX\Turbo\Bridge\Mercure\TurboStreamListenRenderer;
 use Twig\Environment;
+use Twig\Extension\AbstractExtension;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -289,9 +290,15 @@ final class MercureExtension extends Extension
         }
 
         if (class_exists(Environment::class) && class_exists(TwigMercureExtension::class)) {
-            $container->register(TwigMercureExtension::class)
-                ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')])
-                ->addTag('twig.extension');
+            $definition = $container->register(TwigMercureExtension::class)
+                ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')]);
+
+            /* @phpstan-ignore function.impossibleType */
+            if (is_a(TwigMercureExtension::class, AbstractExtension::class, true)) {
+                $definition->addTag('twig.extension');
+            } else {
+                $definition->addTag('twig.attribute_extension');
+            }
         }
     }
 
