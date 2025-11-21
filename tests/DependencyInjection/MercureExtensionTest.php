@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
+use Symfony\Component\Mercure\FrankenPhpHub;
+use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubRegistry;
 
 /**
@@ -213,5 +215,30 @@ class MercureExtensionTest extends TestCase
 
     public function testExtensionBuiltin()
     {
+        if (!class_exists(FrankenPhpHub::class)) {
+            $this->markTestSkipped('FrankenPhpHub is not available (old version of symfony/mercure).');
+        }
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    [
+                        'name' => 'default',
+                        'public_url' => 'https://demo.mercure.rocks/hub',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.default'));
+        $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
     }
+}
+
+// Stub for mercure_publish()
+if (!function_exists('mercure_publish')) {
+    function mercure_publish() {}
 }
