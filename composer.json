@@ -5,12 +5,6 @@
     "keywords": ["mercure", "push", "sse", "updates"],
     "homepage": "https://symfony.com",
     "license": "MIT",
-    "repositories": [
-      {
-        "type": "path",
-        "url": "../symfony-mercure"
-      }
-    ],
     "authors": [
         {
             "name": "Kévin Dunglas",
