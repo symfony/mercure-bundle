@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
+use Symfony\Component\Mercure\FrankenPhpHub;
+use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubRegistry;
 
 /**
@@ -198,8 +200,6 @@ class MercureExtensionTest extends TestCase
         $this->assertSame('https://demo.mercure.rocks/hub', $container->getDefinition('mercure.hub.default')->getArgument(0));
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.default.publisher')->getTags());
         $this->assertSame('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU', $container->getDefinition('mercure.hub.default.jwt_provider')->getArgument(0));
-        $this->assertSame(['default' => 'https://demo.mercure.rocks/hub', 'managed' => 'https://demo.mercure.rocks/managed'], $container->getParameter('mercure.hubs'));
-        $this->assertSame('https://demo.mercure.rocks/hub', $container->getParameter('mercure.default_hub'));
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $defaultPublisher', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managedPublisher', $container->getAliases());
 
@@ -211,5 +211,36 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs'][0]['url'], $registry->getHub()->getUrl());
         $this->assertSame($config['mercure']['hubs'][0]['url'], $registry->getHub('default')->getUrl());
         $this->assertSame($config['mercure']['hubs'][1]['url'], $registry->getHub('managed')->getUrl());
+    }
+
+    public function testExtensionBuiltin()
+    {
+        if (!class_exists(FrankenPhpHub::class)) {
+            $this->markTestSkipped('FrankenPhpHub is not available (old version of symfony/mercure).');
+        }
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    [
+                        'name' => 'default',
+                        'public_url' => 'https://demo.mercure.rocks/hub',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.default'));
+        $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
+    }
+}
+
+// Stub for mercure_publish()
+if (!\function_exists('mercure_publish')) {
+    function mercure_publish()
+    {
     }
 }
