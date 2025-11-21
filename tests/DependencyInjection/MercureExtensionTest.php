@@ -240,6 +240,7 @@ class MercureExtensionTest extends TestCase
 
 // Stub for mercure_publish()
 if (!\function_exists('mercure_publish')) {
-    function mercure_publish() {
+    function mercure_publish()
+    {
     }
 }
