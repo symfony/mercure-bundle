@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.4.1
+-----
+
+* Fix Twig extension registration when using Symfony Mercure 0.7
+
 0.4.0
 -----
 
