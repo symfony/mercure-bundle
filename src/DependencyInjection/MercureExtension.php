@@ -297,7 +297,7 @@ final class MercureExtension extends Extension
             if (is_a(TwigMercureExtension::class, AbstractExtension::class, true)) {
                 $definition->addTag('twig.extension');
             } else {
-                $definition->addTag('twig.attribute_extension');
+                $definition->addTag('twig.attribute_extension')->addTag('twig.runtime');
             }
         }
     }
