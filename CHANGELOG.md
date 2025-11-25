@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.4.2
+-----
+
+* Fix Twig extension registration when using Symfony Mercure 0.7 (again)
+
 0.4.1
 -----
 
@@ -12,7 +17,7 @@ CHANGELOG
 * Add support for FrankenPHP's `mercure_publish()` function
 * Allow Symfony 8
 * Compatibility with PHP 8.5
-* Pass Twig as dependency of `TurboStreamListenRenderer`
+* Pass Twig as a dependency of `TurboStreamListenRenderer`
 * Fix cache warmup without JWT secrets
 * Drop support for unmaintained PHP and Symfony versions
 
