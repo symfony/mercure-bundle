@@ -236,6 +236,180 @@ class MercureExtensionTest extends TestCase
         $this->assertTrue($container->hasDefinition('mercure.hub.default'));
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
     }
+
+    public function testExtensionWithSplitPublisherSubscriber()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'publisher' => [
+                            'secret' => 'publisher-key',
+                            'topics' => ['*'],
+                        ],
+                        'subscriber' => [
+                            'secret' => 'subscriber-key',
+                            'topics' => ['https://example.com/book/{id}.jsonld'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        // Publisher factory is separate because secrets differ
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.publisher.jwt.factory'));
+        $this->assertSame('publisher-key', $container->getDefinition('mercure.hub.default.publisher.jwt.factory')->getArgument(0));
+
+        // Subscriber factory is separate
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.subscriber.jwt.factory'));
+        $this->assertSame('subscriber-key', $container->getDefinition('mercure.hub.default.subscriber.jwt.factory')->getArgument(0));
+
+        // No shared factory
+        $this->assertFalse($container->hasDefinition('mercure.hub.default.jwt.factory'));
+
+        // FactoryTokenProvider uses subscriber topics as subscribe and publisher topics as publish
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt.provider'));
+        $this->assertSame(['https://example.com/book/{id}.jsonld'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(1));
+        $this->assertSame(['*'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(2));
+
+        // TokenFactory aliases exist (subscriber factory)
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $defaultFactory', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $defaultTokenFactory', $container->getAliases());
+
+        // TokenProvider aliases exist
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $default', $container->getAliases());
+    }
+
+    public function testExtensionPublisherOnlyNoSubscriber()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'publisher' => [
+                            'value' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.default'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt.provider'));
+        $this->assertSame(
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+            $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0)
+        );
+
+        // No token factory aliases
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $defaultTokenFactory', $container->getAliases());
+
+        // Token provider aliases exist
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $default', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $defaultProvider', $container->getAliases());
+    }
+
+    public function testExtensionPublisherProviderSubscriberFactory()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'publisher' => [
+                            'provider' => 'app.custom_token_provider',
+                        ],
+                        'subscriber' => [
+                            'factory' => 'app.custom_token_factory',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.default'));
+        // Provider is used directly by reference
+        $hubDef = $container->getDefinition('mercure.hub.default');
+        $this->assertSame('app.custom_token_provider', (string) $hubDef->getArgument(1));
+
+        // No JWT provider service registered (custom service used directly)
+        $this->assertFalse($container->hasDefinition('mercure.hub.default.jwt.provider'));
+
+        // No token factory aliases (publisher.provider branch doesn't register them)
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
+    }
+
+    public function testExtensionCannotMixJwtAndPublisher()
+    {
+        $this->expectException(\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException::class);
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'value' => 'some-token',
+                        ],
+                        'publisher' => [
+                            'value' => 'another-token',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+    }
+
+    public function testExtensionSharedSecretOptimization()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'publisher' => [
+                            'secret' => '!SameKey!',
+                            'topics' => ['*'],
+                        ],
+                        'subscriber' => [
+                            'secret' => '!SameKey!',
+                            'topics' => ['https://example.com/book/{id}.jsonld'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        // Shared-secret optimization: single LcobucciFactory as mercure.hub.default.jwt.factory
+        $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt.factory'));
+        $this->assertSame('!SameKey!', $container->getDefinition('mercure.hub.default.jwt.factory')->getArgument(0));
+
+        // No separate publisher/subscriber factories
+        $this->assertFalse($container->hasDefinition('mercure.hub.default.publisher.jwt.factory'));
+        $this->assertFalse($container->hasDefinition('mercure.hub.default.subscriber.jwt.factory'));
+
+        // TokenFactory aliases point to the shared lazy factory
+        $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
+    }
 }
 
 // Stub for mercure_publish()

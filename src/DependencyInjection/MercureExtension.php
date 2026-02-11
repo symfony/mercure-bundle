@@ -32,7 +32,6 @@ use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
-use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
 use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
@@ -77,66 +76,101 @@ final class MercureExtension extends Extension
 
             $tokenFactory = null;
             $tokenProvider = null;
-            if (isset($hub['jwt'])) {
-                if (isset($hub['jwt']['value'])) {
+
+            // Publisher block — produces $tokenProvider
+            if (isset($hub['publisher'])) {
+                $pub = $hub['publisher'];
+
+                if (isset($pub['value'])) {
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
 
                     $container->register($tokenProvider, StaticTokenProvider::class)
-                        ->addArgument($hub['jwt']['value'])
+                        ->addArgument($pub['value'])
                         ->addTag('mercure.jwt.provider');
 
                     // TODO: remove the following definition in 0.4
                     $jwtProvider = \sprintf('mercure.hub.%s.jwt_provider', $name);
                     $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
-                        ->addArgument($hub['jwt']['value']);
+                        ->addArgument($pub['value']);
 
                     $this->deprecate(
                         $jwtProviderDefinition,
                         'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.'
                     );
-                } elseif (isset($hub['jwt']['provider'])) {
-                    $tokenProvider = $hub['jwt']['provider'];
+                } elseif (isset($pub['provider'])) {
+                    $tokenProvider = $pub['provider'];
                 } else {
-                    if (isset($hub['jwt']['factory'])) {
-                        $tokenFactory = $hub['jwt']['factory'];
-                    } else {
-                        // 'secret' must be set.
-                        $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
-                        $container->register($tokenFactory, LcobucciFactory::class)
-                            ->addArgument($hub['jwt']['secret'])
-                            ->addArgument($hub['jwt']['algorithm'])
+                    // factory or secret — need a TokenFactoryInterface for the publisher
+                    $sub = $hub['subscriber'] ?? [];
+                    $sharedSecret = isset($pub['secret'], $sub['secret'])
+                        && $pub['secret'] === $sub['secret']
+                        && ($pub['algorithm'] ?? 'hmac.sha256') === ($sub['algorithm'] ?? 'hmac.sha256')
+                        && ($pub['passphrase'] ?? '') === ($sub['passphrase'] ?? '');
+
+                    if (isset($pub['factory'])) {
+                        $publisherFactory = $pub['factory'];
+                    } elseif ($sharedSecret) {
+                        // Shared-secret optimization: single LcobucciFactory
+                        $publisherFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
+                        $container->register($publisherFactory, LcobucciFactory::class)
+                            ->addArgument($pub['secret'])
+                            ->addArgument($pub['algorithm'] ?? 'hmac.sha256')
                             ->addArgument(null)
-                            ->addArgument($hub['jwt']['passphrase'])
+                            ->addArgument($pub['passphrase'] ?? '')
+                            ->addTag('mercure.jwt.factory');
+                    } else {
+                        $publisherFactory = \sprintf('mercure.hub.%s.publisher.jwt.factory', $name);
+                        $container->register($publisherFactory, LcobucciFactory::class)
+                            ->addArgument($pub['secret'])
+                            ->addArgument($pub['algorithm'] ?? 'hmac.sha256')
+                            ->addArgument(null)
+                            ->addArgument($pub['passphrase'] ?? '')
                             ->addTag('mercure.jwt.factory');
                     }
 
-                    $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
+                    $lazyPublisherFactory = '.lazy.'.$publisherFactory;
+                    $container->register($lazyPublisherFactory, TokenFactoryInterface::class)
                         ->setFactory(['Closure', 'fromCallable'])
-                        ->addArgument([new Reference($tokenFactory), 'create']);
-                    $tokenFactory = '.lazy.'.$tokenFactory;
+                        ->addArgument([new Reference($publisherFactory), 'create']);
 
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
-                        ->addArgument(new Reference($tokenFactory))
-                        ->addArgument($hub['jwt']['subscribe'] ?? [])
-                        ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addArgument(new Reference($lazyPublisherFactory))
+                        ->addArgument($sub['topics'] ?? [])
+                        ->addArgument($pub['topics'] ?? [])
                         ->addTag('mercure.jwt.factory');
 
-                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
-                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
-                    $container->registerAliasForArgument(
-                        $tokenFactory,
-                        TokenFactoryInterface::class,
-                        "{$name}TokenFactory"
-                    );
-                }
-            } elseif (isset($hub['jwt_provider'])) {
-                $jwtProvider = $hub['jwt_provider'];
-                $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
+                    // Subscriber block — produces $tokenFactory
+                    if (isset($sub['factory'])) {
+                        $tokenFactory = $sub['factory'];
+                    } elseif ($sharedSecret) {
+                        // Reuse the same LcobucciFactory
+                        $tokenFactory = $lazyPublisherFactory;
+                    } elseif (isset($sub['secret'])) {
+                        $subscriberFactory = \sprintf('mercure.hub.%s.subscriber.jwt.factory', $name);
+                        $container->register($subscriberFactory, LcobucciFactory::class)
+                            ->addArgument($sub['secret'])
+                            ->addArgument($sub['algorithm'] ?? 'hmac.sha256')
+                            ->addArgument(null)
+                            ->addArgument($sub['passphrase'] ?? '')
+                            ->addTag('mercure.jwt.factory');
 
-                $container->register($tokenProvider, CallableTokenProvider::class)
-                    ->addArgument(new Reference($jwtProvider))
-                    ->addTag('mercure.jwt.provider');
+                        $tokenFactory = '.lazy.'.$subscriberFactory;
+                        $container->register($tokenFactory, TokenFactoryInterface::class)
+                            ->setFactory(['Closure', 'fromCallable'])
+                            ->addArgument([new Reference($subscriberFactory), 'create']);
+                    }
+
+                    if (null !== $tokenFactory) {
+                        $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
+                        $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
+                        $container->registerAliasForArgument(
+                            $tokenFactory,
+                            TokenFactoryInterface::class,
+                            "{$name}TokenFactory"
+                        );
+                    }
+                }
             }
 
             if (null !== $tokenProvider) {
