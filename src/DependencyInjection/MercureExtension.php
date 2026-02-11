@@ -328,6 +328,7 @@ final class MercureExtension extends Extension
                 ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')]);
 
             /* @phpstan-ignore function.impossibleType */
+            /* @phpstan-ignore function.alreadyNarrowedType */
             if (is_a(TwigMercureExtension::class, AbstractExtension::class, true)) {
                 $definition->addTag('twig.extension');
             } else {
