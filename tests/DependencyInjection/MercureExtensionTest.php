@@ -50,10 +50,12 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs']['default']['jwt'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $default', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $default', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $default', $container->getAliases());
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $defaultHub', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\RemoteHubInterface $defaultHub', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $defaultPublisher', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $defaultProvider', $container->getAliases());
 
