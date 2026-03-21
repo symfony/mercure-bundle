@@ -42,6 +42,7 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\ProtocolVersion;
+use Symfony\Component\Mercure\RemoteHubInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
@@ -190,6 +191,8 @@ final class MercureExtension extends Extension
 
                 $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, "{$name}Hub");
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, $name);
             }
 
             $bus = $hub['bus'] ?? null;
@@ -240,6 +243,7 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(HubInterface::class, $defaultHubId);
+        $container->setAlias(RemoteHubInterface::class, $defaultHubId);
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))
