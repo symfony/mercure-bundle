@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\Tests\DependencyInjection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ParameterBag\EnvPlaceholderParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
@@ -235,6 +236,67 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default'));
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
+    }
+
+    public function testExtensionLazyHubResolving()
+    {
+        if (!class_exists(FrankenPhpHub::class)) {
+            $this->markTestSkipped('FrankenPhpHub is not available (old version of symfony/mercure).');
+        }
+
+        $parameterBag = new EnvPlaceholderParameterBag(['kernel.debug' => false]);
+        $container = new ContainerBuilder($parameterBag);
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    [
+                        'name' => 'builtin',
+                        'url' => $parameterBag->get('env(default::BUILTIN_HUB_URL)'),
+                        'public_url' => $parameterBag->get('env(default::BUILTIN_HUB_PUBLIC_URL)'),
+                        'jwt' => [
+                            'secret' => $parameterBag->get('env(default::BUILTIN_HUB_JWT_SECRET)'),
+                            'publish' => '*',
+                        ],
+                    ],
+                    [
+                        'name' => 'external',
+                        'url' => $parameterBag->get('env(default::EXTERNAL_HUB_URL)'),
+                        'public_url' => $parameterBag->get('env(default::EXTERNAL_HUB_PUBLIC_URL)'),
+                        'jwt' => [
+                            'secret' => $parameterBag->get('env(default::EXTERNAL_HUB_JWT_SECRET)'),
+                            'publish' => '*',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $_SERVER['BUILTIN_HUB_URL'] = null;
+        $_SERVER['BUILTIN_HUB_PUBLIC_URL'] = 'https://demo.mercure.rocks/hub';
+        $_SERVER['BUILTIN_HUB_JWT_SECRET'] = null;
+
+        $_SERVER['EXTERNAL_HUB_URL'] = 'https://demo.mercure.rocks/hub';
+        $_SERVER['EXTERNAL_HUB_PUBLIC_URL'] = 'https://demo.mercure.rocks/hub';
+        $_SERVER['EXTERNAL_HUB_JWT_SECRET'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU';
+
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.builtin'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.builtin.builtin_hub'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.builtin.external_hub'));
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.external'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.external.builtin_hub'));
+        $this->assertTrue($container->hasDefinition('mercure.hub.external.external_hub'));
+
+        $container->getDefinition('mercure.hub.builtin')->setPublic(true);
+        $container->getDefinition('mercure.hub.external')->setPublic(true);
+
+        $container->compile(true);
+
+        $this->assertInstanceOf(FrankenPhpHub::class, $container->get('mercure.hub.builtin'));
+        $this->assertInstanceOf(Hub::class, $container->get('mercure.hub.external'));
     }
 }
 
