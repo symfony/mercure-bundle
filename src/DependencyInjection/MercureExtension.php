@@ -154,6 +154,8 @@ final class MercureExtension extends Extension
                 $defaultPublisher = $publisherId;
             }
 
+            $httpClientId = $hub['http_client'] ?? 'http_client';
+
             if ($builtinHub) {
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
@@ -165,7 +167,7 @@ final class MercureExtension extends Extension
                     ->addArgument(new Reference($tokenProvider))
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addArgument($hub['public_url'])
-                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument(new Reference($httpClientId, ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
                     ->addTag('mercure.hub');
             }
 
@@ -176,7 +178,7 @@ final class MercureExtension extends Extension
                 $publisherDefinition = $container->register($publisherId, Publisher::class)
                     ->addArgument($hub['url'])
                     ->addArgument(new Reference($tokenProvider))
-                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument(new Reference($httpClientId, ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
                     ->addTag('mercure.publisher');
 
                 $this->deprecate(
@@ -293,7 +295,7 @@ final class MercureExtension extends Extension
             $definition = $container->register(TwigMercureExtension::class)
                 ->setArguments([new Reference(HubRegistry::class), new Reference(Authorization::class), new Reference('request_stack')]);
 
-            /* @phpstan-ignore function.impossibleType */
+            /* @phpstan-ignore function.alreadyNarrowedType */
             if (is_a(TwigMercureExtension::class, AbstractExtension::class, true)) {
                 $definition->addTag('twig.extension');
             } else {
