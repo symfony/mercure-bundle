@@ -26,7 +26,7 @@ use Symfony\Component\Mercure\HubRegistry;
  */
 class MercureExtensionTest extends TestCase
 {
-    public function testExtensionMinimum()
+    public function testExtensionMinimum(): void
     {
         $config = [
             'mercure' => [
@@ -61,7 +61,7 @@ class MercureExtensionTest extends TestCase
         $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $defaultTokenFactory', $container->getAliases());
     }
 
-    public function testExtension()
+    public function testExtension(): void
     {
         $config = [
             'mercure' => [
@@ -173,7 +173,7 @@ class MercureExtensionTest extends TestCase
     /**
      * @group legacy
      */
-    public function testExtensionLegacy()
+    public function testExtensionLegacy(): void
     {
         $config = [
             'mercure' => [
@@ -213,7 +213,51 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs'][1]['url'], $registry->getHub('managed')->getUrl());
     }
 
-    public function testExtensionBuiltin()
+    public function testExtensionWithCustomHttpClient(): void
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        'http_client' => 'app.mercure_http_client',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $hubArguments = $container->getDefinition('mercure.hub.default')->getArguments();
+        $this->assertSame('app.mercure_http_client', (string) $hubArguments[4]);
+
+        $publisherArguments = $container->getDefinition('mercure.hub.default.publisher')->getArguments();
+        $this->assertSame('app.mercure_http_client', (string) $publisherArguments[2]);
+    }
+
+    public function testExtensionDefaultsToGlobalHttpClient(): void
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $hubArguments = $container->getDefinition('mercure.hub.default')->getArguments();
+        $this->assertSame('http_client', (string) $hubArguments[4]);
+    }
+
+    public function testExtensionBuiltin(): void
     {
         if (!class_exists(FrankenPhpHub::class)) {
             $this->markTestSkipped('FrankenPhpHub is not available (old version of symfony/mercure).');
@@ -240,7 +284,7 @@ class MercureExtensionTest extends TestCase
 
 // Stub for mercure_publish()
 if (!\function_exists('mercure_publish')) {
-    function mercure_publish()
+    function mercure_publish(): void
     {
     }
 }
