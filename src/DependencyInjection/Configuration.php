@@ -68,14 +68,30 @@ final class Configuration implements ConfigurationInterface
                     ->scalarNode('provider')->info('The ID of a service to call to provide the JSON Web Token.')->end()
                     ->scalarNode('factory')->info('The ID of a service to call to create the JSON Web Token.')->end()
                     ->arrayNode('publish')
-                        ->beforeNormalization()->castToArray()->end()
-                        ->scalarPrototype()->end()
-                        ->info('A list of topics to allow publishing to when using the given factory to generate the JWT.')
+                        ->beforeNormalization()
+                            ->always(static function ($v) {
+                                if (is_string($v) || (is_array($v) && isset($v['match']))) {
+                                    return [$v];
+                                }
+
+                                return (array) $v;
+                            })
+                        ->end()
+                        ->variablePrototype()->end()
+                        ->info('Matchers used to filter authorized topics for publishing.')
                     ->end()
                     ->arrayNode('subscribe')
-                        ->beforeNormalization()->castToArray()->end()
-                        ->scalarPrototype()->end()
-                        ->info('A list of topics to allow subscribing to when using the given factory to generate the JWT.')
+                        ->beforeNormalization()
+                            ->always(static function ($v) {
+                                if (is_string($v) || (is_array($v) && isset($v['match']))) {
+                                    return [$v];
+                                }
+
+                                return (array) $v;
+                            })
+                        ->end()
+                        ->variablePrototype()->end()
+                        ->info('Matchers used to filter authorized topics for subscription.')
                     ->end()
                     ->scalarNode('secret')->info('The JWT Secret to use.')->example('!ChangeMe!')->end()
                     ->scalarNode('passphrase')->info('The JWT secret passphrase.')->defaultValue('')->end()
@@ -87,6 +103,11 @@ final class Configuration implements ConfigurationInterface
             ->setDeprecated('symfony/mercure-bundle', '0.3', 'The child node "%node%" at path "%path%" is deprecated, use "jwt.provider" instead.')
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
+        ->enumNode('version')
+            ->values(['v0', 'v1'])
+            ->defaultValue('v1')
+            ->info('The Mercure protocol version to use (v0 for legacy, v1 for current).')
+        ->end()
                             ->end()
                             ->validate()
         ->ifTrue(function ($v) { return isset($v['jwt'], $v['jwt_provider']); })

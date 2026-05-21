@@ -39,6 +39,7 @@ use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
+use Symfony\Component\Mercure\MercureVersion;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
@@ -74,6 +75,7 @@ final class MercureExtension extends Extension
         $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $builtinHub = !isset($hub['url']);
+            $version = 'v0' === ($hub['version'] ?? 'v1') ? MercureVersion::V0 : MercureVersion::V1;
 
             $tokenFactory = null;
             $tokenProvider = null;
@@ -107,6 +109,7 @@ final class MercureExtension extends Extension
                             ->addArgument($hub['jwt']['algorithm'])
                             ->addArgument(null)
                             ->addArgument($hub['jwt']['passphrase'])
+                            ->addArgument($version)
                             ->addTag('mercure.jwt.factory');
                     }
 
@@ -158,6 +161,7 @@ final class MercureExtension extends Extension
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                    ->addArgument($version)
                     ->addTag('mercure.hub');
             } else {
                 $container->register($hubId, Hub::class)
@@ -166,6 +170,7 @@ final class MercureExtension extends Extension
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addArgument($hub['public_url'])
                     ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument($version)
                     ->addTag('mercure.hub');
             }
 
