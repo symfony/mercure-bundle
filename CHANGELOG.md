@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.5.0
+-----
+
+* Add support for the Mercure protocol 1.0, alongside the existing 0.x protocol: new `protocol_version` (`0.x`, default, or `1.0`) and `cookie_name` per-hub options
+* The `jwt.secret` convenience option now uses `LcobucciFactory`'s Mercure protocol 1.0 support on a `protocol_version: 1.0` hub
+* Add `jwt.claims` (e.g. `iss`/`sub`/`client_id`), required by RFC 9068 when using `jwt.secret` on a `protocol_version: 1.0` hub; `aud` defaults to the hub's own URL when not set
+* Require `symfony/mercure` `^0.8`
+
 0.4.3
 -----
 

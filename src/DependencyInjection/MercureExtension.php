@@ -40,6 +40,7 @@ use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
@@ -74,6 +75,8 @@ final class MercureExtension extends Extension
         $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $builtinHub = !isset($hub['url']);
+            $protocolVersion = '1.0' === $hub['protocol_version'] ? ProtocolVersion::V1 : ProtocolVersion::Legacy;
+            $cookieName = $hub['cookie_name'];
 
             $tokenFactory = null;
             $tokenProvider = null;
@@ -97,29 +100,24 @@ final class MercureExtension extends Extension
                 } elseif (isset($hub['jwt']['provider'])) {
                     $tokenProvider = $hub['jwt']['provider'];
                 } else {
-                    if (isset($hub['jwt']['factory'])) {
-                        $tokenFactory = $hub['jwt']['factory'];
-                    } else {
-                        // 'secret' must be set.
-                        $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
-                        $container->register($tokenFactory, LcobucciFactory::class)
-                            ->addArgument($hub['jwt']['secret'])
-                            ->addArgument($hub['jwt']['algorithm'])
-                            ->addArgument(null)
-                            ->addArgument($hub['jwt']['passphrase'])
-                            ->addTag('mercure.jwt.factory');
-                    }
+                    // 'factory', or 'secret'/'jwks_uri', must be set.
+                    $tokenFactory = $hub['jwt']['factory'] ?? $this->registerTokenFactory($container, $name, $hub, $protocolVersion);
 
                     $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
                         ->setFactory(['Closure', 'fromCallable'])
                         ->addArgument([new Reference($tokenFactory), 'create']);
                     $tokenFactory = '.lazy.'.$tokenFactory;
 
+                    // "aud" defaults to the hub's own public identifier when not explicitly set;
+                    // required (along with "iss"/"sub"/"client_id") by RFC 9068 access tokens under protocol 1.0.
+                    $additionalClaims = ($hub['jwt']['claims'] ?? []) + ['aud' => $hub['public_url'] ?? $hub['url'] ?? null];
+
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
                         ->addArgument($hub['jwt']['subscribe'] ?? [])
                         ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addArgument($additionalClaims)
                         ->addTag('mercure.jwt.factory');
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
@@ -158,6 +156,8 @@ final class MercureExtension extends Extension
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                    ->addArgument($protocolVersion)
+                    ->addArgument($cookieName)
                     ->addTag('mercure.hub');
             } else {
                 $container->register($hubId, Hub::class)
@@ -166,6 +166,8 @@ final class MercureExtension extends Extension
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addArgument($hub['public_url'])
                     ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument($protocolVersion)
+                    ->addArgument($cookieName)
                     ->addTag('mercure.hub');
             }
 
@@ -301,6 +303,24 @@ final class MercureExtension extends Extension
                 $definition->addTag('twig.attribute_extension')->addTag('twig.runtime');
             }
         }
+    }
+
+    /**
+     * Registers the token factory built from "jwt.secret" for the given hub, and returns its service id.
+     */
+    private function registerTokenFactory(ContainerBuilder $container, string $name, array $hub, ProtocolVersion $protocolVersion): string
+    {
+        $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
+
+        $container->register($tokenFactory, LcobucciFactory::class)
+            ->addArgument($hub['jwt']['secret'])
+            ->addArgument($hub['jwt']['algorithm'])
+            ->addArgument(null)
+            ->addArgument($hub['jwt']['passphrase'])
+            ->addArgument($protocolVersion)
+            ->addTag('mercure.jwt.factory');
+
+        return $tokenFactory;
     }
 
     /**
