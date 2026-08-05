@@ -6,7 +6,8 @@ CHANGELOG
 
 * Add support for the Mercure protocol 1.0, alongside the existing 0.x protocol: new `protocol_version` (`0.x`, default, or `1.0`) and `cookie_name` per-hub options
 * The `jwt.secret` convenience option now uses `LcobucciFactory`'s Mercure protocol 1.0 support on a `protocol_version: 1.0` hub
-* Add `jwt.claims` (e.g. `iss`/`sub`/`client_id`), required by RFC 9068 when using `jwt.secret` on a `protocol_version: 1.0` hub; `aud` defaults to the hub's own URL when not set. Missing required claims fail at container compile time, and a `0.x` hub without `jwt.claims` keeps minting byte-identical legacy tokens (no `DefaultClaimsTokenFactory` wrapping, no automatic `aud`)
+* Add `jwt.jwks_uri` and `jwt.key_id`, fetching the signing key from a JSON Web Key Set endpoint via `WebTokenFactory` instead of `jwt.secret` (requires `web-token/jwt-library`, Mercure 1.0 hubs only)
+* Add `jwt.claims` (e.g. `iss`/`sub`/`client_id`), required by RFC 9068 when using `jwt.secret`/`jwt.jwks_uri` on a `protocol_version: 1.0` hub; `aud` defaults to the hub's own URL when not set. Missing required claims fail at container compile time, and a `0.x` hub without `jwt.claims` keeps minting byte-identical legacy tokens (no `DefaultClaimsTokenFactory` wrapping, no automatic `aud`)
 * Require `symfony/mercure` `^0.8`
 * Follow `symfony/mercure`'s `Hub`/`FrankenPhpHub` constructor parameter reorder (`$cookieName` before `$protocolVersion`) and its `Grant`-based `TokenFactoryInterface::create()`; `jwt.subscribe`/`jwt.publish` are now wired in as one `publish` and one `subscribe` `Grant`, always both present so the legacy claim's shape is unchanged for hubs configuring neither
 * Require PHP 8.2, up from 8.1, following `symfony/mercure`

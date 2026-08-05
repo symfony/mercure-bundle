@@ -99,4 +99,51 @@ class ConfigurationTest extends TestCase
 
         $this->assertSame(['iss' => 'https://example.com', 'sub' => 'https://example.com'], $config['hubs']['default']['jwt']['claims']);
     }
+
+    public function testJwksUriAcceptedWithProtocolVersion10()
+    {
+        $config = $this->process([
+            'hubs' => [
+                'default' => [
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => ['jwks_uri' => 'https://example.com/jwks.json', 'key_id' => 'key1'],
+                    'protocol_version' => '1.0',
+                ],
+            ],
+        ]);
+
+        $this->assertSame('https://example.com/jwks.json', $config['hubs']['default']['jwt']['jwks_uri']);
+        $this->assertSame('key1', $config['hubs']['default']['jwt']['key_id']);
+    }
+
+    public function testJwksUriRejectedWithoutProtocolVersion10()
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches('/jwt\.jwks_uri.*protocol_version: 1\.0/');
+
+        $this->process([
+            'hubs' => [
+                'default' => [
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => ['jwks_uri' => 'https://example.com/jwks.json'],
+                ],
+            ],
+        ]);
+    }
+
+    public function testJwksUriAndSecretAreMutuallyExclusive()
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches('/jwt\.secret.*jwt\.jwks_uri/');
+
+        $this->process([
+            'hubs' => [
+                'default' => [
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => ['secret' => '!ChangeMe!', 'jwks_uri' => 'https://example.com/jwks.json'],
+                    'protocol_version' => '1.0',
+                ],
+            ],
+        ]);
+    }
 }

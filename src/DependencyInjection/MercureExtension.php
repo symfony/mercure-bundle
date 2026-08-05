@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
+use Jose\Component\Core\JWK;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
@@ -42,6 +43,7 @@ use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
+use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\Publisher;
@@ -58,6 +60,11 @@ use Twig\Extension\AbstractExtension;
  */
 final class MercureExtension extends Extension
 {
+    public function __construct(
+        private readonly ?bool $webTokenLibraryInstalled = null,
+    ) {
+    }
+
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = $this->getConfiguration($configs, $container);
@@ -342,21 +349,40 @@ final class MercureExtension extends Extension
         if (ProtocolVersion::V1 === $protocolVersion) {
             $missing = array_filter(['iss', 'sub', 'client_id'], static fn (string $claim): bool => empty($hub['jwt']['claims'][$claim]));
             if ([] !== $missing) {
-                throw new InvalidConfigurationException(\sprintf('The "mercure.hubs.%s.jwt.claims" option must define the "%s" claim(s): they are required by RFC 9068 access tokens when "protocol_version" is "1.0" and "jwt.secret" is used.', $name, implode('", "', $missing)));
+                throw new InvalidConfigurationException(\sprintf('The "mercure.hubs.%s.jwt.claims" option must define the "%s" claim(s): they are required by RFC 9068 access tokens when "protocol_version" is "1.0" and "jwt.secret" or "jwt.jwks_uri" is used.', $name, implode('", "', $missing)));
             }
         }
 
         $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory', $name);
 
-        $container->register($tokenFactory, LcobucciFactory::class)
-            ->addArgument($hub['jwt']['secret'])
-            ->addArgument($hub['jwt']['algorithm'])
-            // RFC 9068 access tokens are expected to carry an "exp" claim; a resource server may
-            // reject one that doesn't. The legacy "mercure" claim has no such expectation, so only
-            // protocol 1.0 gets an automatic lifetime here, preserving the 0.x non-expiring default.
-            ->addArgument(ProtocolVersion::V1 === $protocolVersion ? 0 : null)
-            ->addArgument($hub['jwt']['passphrase'])
-            ->addArgument($protocolVersion)
+        if (!isset($hub['jwt']['jwks_uri'])) {
+            $container->register($tokenFactory, LcobucciFactory::class)
+                ->addArgument($hub['jwt']['secret'])
+                ->addArgument($hub['jwt']['algorithm'])
+                // RFC 9068 access tokens are expected to carry an "exp" claim; a resource server may
+                // reject one that doesn't. The legacy "mercure" claim has no such expectation, so only
+                // protocol 1.0 gets an automatic lifetime here, preserving the 0.x non-expiring default.
+                ->addArgument(ProtocolVersion::V1 === $protocolVersion ? 0 : null)
+                ->addArgument($hub['jwt']['passphrase'])
+                ->addArgument($protocolVersion)
+                ->addTag('mercure.jwt.factory');
+
+            return $tokenFactory;
+        }
+
+        if (!($this->webTokenLibraryInstalled ?? class_exists(JWK::class))) {
+            throw new \LogicException(\sprintf('The "%1$s" hub is configured with "jwt.jwks_uri", but the "web-token/jwt-library" package required to fetch the signing key from a JSON Web Key Set is not installed. Try running "composer require web-token/jwt-library", or configure "mercure.hubs.%1$s.jwt.factory" to point to your own token factory service.', $name));
+        }
+
+        $container->register($tokenFactory, WebTokenFactory::class)
+            ->setFactory([WebTokenFactory::class, 'fromJwksUri'])
+            ->setArgument('$jwksUri', $hub['jwt']['jwks_uri'])
+            ->setArgument('$httpClient', new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+            ->setArgument('$algorithm', $hub['jwt']['algorithm'])
+            ->setArgument('$keyId', $hub['jwt']['key_id'] ?? null)
+            // this branch only exists for protocol 1.0 (the "jwks_uri" config option requires it),
+            // so, unlike LcobucciFactory's, this lifetime default is unconditional; see the comment there.
+            ->setArgument('$jwtLifetime', 0)
             ->addTag('mercure.jwt.factory');
 
         return $tokenFactory;

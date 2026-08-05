@@ -25,6 +25,7 @@ use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
+use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
@@ -413,6 +414,60 @@ class MercureExtensionTest extends TestCase
             ['iss' => 'https://example.com'],
             $container->getDefinition('mercure.hub.default.jwt.factory.default_claims')->getArgument(1)
         );
+    }
+
+    public function testV1HubUsesWebTokenFactoryFromJwksUriWhenConfigured()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'jwks_uri' => 'https://example.com/jwks.json',
+                            'key_id' => 'key1',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension(webTokenLibraryInstalled: true))->load($config, $container);
+
+        $definition = $container->getDefinition('mercure.hub.default.jwt.factory');
+        $this->assertSame(WebTokenFactory::class, $definition->getClass());
+        $this->assertSame([WebTokenFactory::class, 'fromJwksUri'], $definition->getFactory());
+        $this->assertSame('https://example.com/jwks.json', $definition->getArgument('$jwksUri'));
+        $this->assertSame('key1', $definition->getArgument('$keyId'));
+        $this->assertSame(0, $definition->getArgument('$jwtLifetime'));
+    }
+
+    public function testJwksUriWithoutWebTokenLibraryThrows()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'jwks_uri' => 'https://example.com/jwks.json',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('web-token/jwt-library');
+
+        (new MercureExtension(webTokenLibraryInstalled: false))->load($config, $container);
     }
 
     public function testV1HubWithSecretAndClaimsMintsATokenEndToEnd()
