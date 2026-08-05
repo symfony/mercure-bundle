@@ -296,6 +296,7 @@ class MercureExtensionTest extends TestCase
         $definition = $container->getDefinition('mercure.hub.default.jwt.factory');
         $this->assertSame(LcobucciFactory::class, $definition->getClass());
         $this->assertSame('!ChangeMe!', $definition->getArgument(0));
+        $this->assertNull($definition->getArgument(2));
         $this->assertSame(ProtocolVersion::Legacy, $definition->getArgument(4));
     }
 
@@ -321,6 +322,9 @@ class MercureExtensionTest extends TestCase
         $definition = $container->getDefinition('mercure.hub.default.jwt.factory');
         $this->assertSame(LcobucciFactory::class, $definition->getClass());
         $this->assertSame('!ChangeMe!', $definition->getArgument(0));
+        // an RFC 9068 access token without an "exp" claim gets rejected by a resource server; unlike
+        // the legacy claim, protocol 1.0 must not leave this factory's default lifetime as "unset".
+        $this->assertSame(0, $definition->getArgument(2));
         $this->assertSame(ProtocolVersion::V1, $definition->getArgument(4));
     }
 

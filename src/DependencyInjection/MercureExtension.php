@@ -315,7 +315,10 @@ final class MercureExtension extends Extension
         $container->register($tokenFactory, LcobucciFactory::class)
             ->addArgument($hub['jwt']['secret'])
             ->addArgument($hub['jwt']['algorithm'])
-            ->addArgument(null)
+            // RFC 9068 access tokens are expected to carry an "exp" claim; a resource server may
+            // reject one that doesn't. The legacy "mercure" claim has no such expectation, so only
+            // protocol 1.0 gets an automatic lifetime here, preserving the 0.x non-expiring default.
+            ->addArgument(ProtocolVersion::V1 === $protocolVersion ? 0 : null)
             ->addArgument($hub['jwt']['passphrase'])
             ->addArgument($protocolVersion)
             ->addTag('mercure.jwt.factory');
