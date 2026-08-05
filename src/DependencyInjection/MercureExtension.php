@@ -33,6 +33,7 @@ use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
+use Symfony\Component\Mercure\Jwt\DefaultClaimsTokenFactory;
 use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
@@ -101,23 +102,29 @@ final class MercureExtension extends Extension
                     $tokenProvider = $hub['jwt']['provider'];
                 } else {
                     // 'factory', or 'secret'/'jwks_uri', must be set.
-                    $tokenFactory = $hub['jwt']['factory'] ?? $this->registerTokenFactory($container, $name, $hub, $protocolVersion);
+                    $rawTokenFactory = $hub['jwt']['factory'] ?? $this->registerTokenFactory($container, $name, $hub, $protocolVersion);
+
+                    // "aud" defaults to the hub's own public identifier when not explicitly set;
+                    // required (along with "iss"/"sub"/"client_id") by RFC 9068 access tokens under protocol 1.0.
+                    // Baked into the factory itself, not just the provider below, so Authorization and the Twig
+                    // mercure() function, which call HubInterface::getFactory() directly, get these claims too.
+                    $defaultClaims = ($hub['jwt']['claims'] ?? []) + ['aud' => $hub['public_url'] ?? $hub['url'] ?? null];
+
+                    $tokenFactory = \sprintf('mercure.hub.%s.jwt.factory.default_claims', $name);
+                    $container->register($tokenFactory, DefaultClaimsTokenFactory::class)
+                        ->addArgument(new Reference($rawTokenFactory))
+                        ->addArgument($defaultClaims);
 
                     $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
                         ->setFactory(['Closure', 'fromCallable'])
                         ->addArgument([new Reference($tokenFactory), 'create']);
                     $tokenFactory = '.lazy.'.$tokenFactory;
 
-                    // "aud" defaults to the hub's own public identifier when not explicitly set;
-                    // required (along with "iss"/"sub"/"client_id") by RFC 9068 access tokens under protocol 1.0.
-                    $additionalClaims = ($hub['jwt']['claims'] ?? []) + ['aud' => $hub['public_url'] ?? $hub['url'] ?? null];
-
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
                         ->addArgument($hub['jwt']['subscribe'] ?? [])
                         ->addArgument($hub['jwt']['publish'] ?? [])
-                        ->addArgument($additionalClaims)
                         ->addTag('mercure.jwt.factory');
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);

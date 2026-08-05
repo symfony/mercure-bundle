@@ -388,8 +388,43 @@ class MercureExtensionTest extends TestCase
 
         $this->assertSame(
             ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com', 'aud' => 'https://demo.mercure.rocks/hub'],
-            $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(3)
+            $container->getDefinition('mercure.hub.default.jwt.factory.default_claims')->getArgument(1)
         );
+    }
+
+    public function testV1HubFactoryIncludesDefaultClaimsForDirectCallers()
+    {
+        if (!class_exists(Key\InMemory::class)) {
+            $this->markTestSkipped('requires lcobucci/jwt.');
+        }
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $container->getDefinition(HubRegistry::class)->setPublic(true);
+        $container->compile();
+
+        // HubInterface::getFactory() is what Authorization::createCookie() and the Twig mercure()
+        // function call directly, bypassing FactoryTokenProvider. Without the default claims baked
+        // into the factory itself, this would throw for a missing "iss"/"aud"/"sub"/"client_id".
+        $jwt = $container->get(HubRegistry::class)->getHub()->getFactory()->create(['https://example.com/topic']);
+
+        $this->assertMatchesRegularExpression('/^[\w-]+\.[\w-]+\.[\w-]+$/', $jwt);
     }
 }
 
