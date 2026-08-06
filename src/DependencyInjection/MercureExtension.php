@@ -125,9 +125,11 @@ final class MercureExtension extends Extension
                     // legacy claim's exact historical shape (a "mercure" object with "publish"/"subscribe"
                     // keys, always present) for hubs that configure neither "jwt.subscribe" nor
                     // "jwt.publish". Under protocol 1.0 an empty-topics grant is inert either way.
+                    // Inline Definitions, not live Grant instances: the compiled container can only
+                    // dump an argument it knows how to (re)construct, not an already-built object.
                     $grants = [
-                        new Grant([Grant::ACTION_PUBLISH], $hub['jwt']['publish'] ?? []),
-                        new Grant([Grant::ACTION_SUBSCRIBE], $hub['jwt']['subscribe'] ?? []),
+                        new Definition(Grant::class, [[Grant::ACTION_PUBLISH], $hub['jwt']['publish'] ?? []]),
+                        new Definition(Grant::class, [[Grant::ACTION_SUBSCRIBE], $hub['jwt']['subscribe'] ?? []]),
                     ];
 
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);

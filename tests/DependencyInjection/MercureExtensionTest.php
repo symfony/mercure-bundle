@@ -17,6 +17,7 @@ use Lcobucci\JWT\Signer\Key;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
@@ -117,8 +118,8 @@ class MercureExtensionTest extends TestCase
         $this->assertNull($container->getDefinition('mercure.hub.managed')->getArgument(5));
         $this->assertEquals(
             [
-                new Grant([Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed']['jwt']['publish']),
-                new Grant([Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed']['jwt']['subscribe']]),
+                new Definition(Grant::class, [[Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed']['jwt']['publish']]),
+                new Definition(Grant::class, [[Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed']['jwt']['subscribe']]]),
             ],
             $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(1)
         );
@@ -147,8 +148,8 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['passphrase'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(3));
         $this->assertEquals(
             [
-                new Grant([Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed2']['jwt']['publish']),
-                new Grant([Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed2']['jwt']['subscribe']]),
+                new Definition(Grant::class, [[Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed2']['jwt']['publish']]),
+                new Definition(Grant::class, [[Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed2']['jwt']['subscribe']]]),
             ],
             $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(1)
         );
