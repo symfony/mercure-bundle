@@ -21,6 +21,7 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubRegistry;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\ProtocolVersion;
 
@@ -51,8 +52,8 @@ class MercureExtensionTest extends TestCase
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.default.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['default']['url'], $container->getDefinition('mercure.hub.default')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['default']['jwt'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(5));
-        $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(6));
+        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(6));
+        $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $default', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $default', $container->getAliases());
@@ -112,10 +113,15 @@ class MercureExtensionTest extends TestCase
         $this->assertArrayHasKey('mercure.publisher', $container->getDefinition('mercure.hub.managed.publisher')->getTags());
         $this->assertSame($config['mercure']['hubs']['managed']['url'], $container->getDefinition('mercure.hub.managed')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['managed']['jwt']['secret'], $container->getDefinition('mercure.hub.managed.jwt.factory')->getArgument(0));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.managed')->getArgument(5));
-        $this->assertNull($container->getDefinition('mercure.hub.managed')->getArgument(6));
-        $this->assertSame([$config['mercure']['hubs']['managed']['jwt']['subscribe']], $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(1));
-        $this->assertSame($config['mercure']['hubs']['managed']['jwt']['publish'], $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(2));
+        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.managed')->getArgument(6));
+        $this->assertNull($container->getDefinition('mercure.hub.managed')->getArgument(5));
+        $this->assertEquals(
+            [
+                new Grant([Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed']['jwt']['publish']),
+                new Grant([Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed']['jwt']['subscribe']]),
+            ],
+            $container->getDefinition('mercure.hub.managed.jwt.provider')->getArgument(1)
+        );
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $managed', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managed', $container->getAliases());
@@ -139,10 +145,15 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['secret'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['algorithm'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(1));
         $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['passphrase'], $container->getDefinition('mercure.hub.managed2.jwt.factory')->getArgument(3));
-        $this->assertSame([$config['mercure']['hubs']['managed2']['jwt']['subscribe']], $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(1));
-        $this->assertSame($config['mercure']['hubs']['managed2']['jwt']['publish'], $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(2));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.managed2')->getArgument(5));
-        $this->assertNull($container->getDefinition('mercure.hub.managed2')->getArgument(6));
+        $this->assertEquals(
+            [
+                new Grant([Grant::ACTION_PUBLISH], $config['mercure']['hubs']['managed2']['jwt']['publish']),
+                new Grant([Grant::ACTION_SUBSCRIBE], [$config['mercure']['hubs']['managed2']['jwt']['subscribe']]),
+            ],
+            $container->getDefinition('mercure.hub.managed2.jwt.provider')->getArgument(1)
+        );
+        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.managed2')->getArgument(6));
+        $this->assertNull($container->getDefinition('mercure.hub.managed2')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $managed2', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $managed2', $container->getAliases());
@@ -165,8 +176,8 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs']['demo']['url'], $container->getDefinition('mercure.hub.demo')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['demo']['public_url'], $container->getDefinition('mercure.hub.demo')->getArgument(3));
         $this->assertSame($config['mercure']['hubs']['demo']['jwt']['value'], $container->getDefinition('mercure.hub.demo.jwt.provider')->getArgument(0));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.demo')->getArgument(5));
-        $this->assertNull($container->getDefinition('mercure.hub.demo')->getArgument(6));
+        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.demo')->getArgument(6));
+        $this->assertNull($container->getDefinition('mercure.hub.demo')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $demo', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\PublisherInterface $demo', $container->getAliases());
@@ -249,8 +260,8 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default'));
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(2));
-        $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(3));
+        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(3));
+        $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
     }
 
     public function testExtensionProtocolVersion1_0()
@@ -271,8 +282,8 @@ class MercureExtensionTest extends TestCase
         $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
         (new MercureExtension())->load($config, $container);
 
-        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(5));
-        $this->assertSame('custom_cookie', $container->getDefinition('mercure.hub.default')->getArgument(6));
+        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(6));
+        $this->assertSame('custom_cookie', $container->getDefinition('mercure.hub.default')->getArgument(5));
     }
 
     public function testLegacyHubUsesLcobucciFactoryWithLegacyProtocolVersion()
@@ -422,7 +433,7 @@ class MercureExtensionTest extends TestCase
         // HubInterface::getFactory() is what Authorization::createCookie() and the Twig mercure()
         // function call directly, bypassing FactoryTokenProvider. Without the default claims baked
         // into the factory itself, this would throw for a missing "iss"/"aud"/"sub"/"client_id".
-        $jwt = $container->get(HubRegistry::class)->getHub()->getFactory()->create(['https://example.com/topic']);
+        $jwt = $container->get(HubRegistry::class)->getHub()->getFactory()->create([new Grant([Grant::ACTION_SUBSCRIBE], ['https://example.com/topic'])]);
 
         $this->assertMatchesRegularExpression('/^[\w-]+\.[\w-]+\.[\w-]+$/', $jwt);
     }

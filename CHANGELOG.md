@@ -8,6 +8,7 @@ CHANGELOG
 * The `jwt.secret` convenience option now uses `LcobucciFactory`'s Mercure protocol 1.0 support on a `protocol_version: 1.0` hub
 * Add `jwt.claims` (e.g. `iss`/`sub`/`client_id`), required by RFC 9068 when using `jwt.secret` on a `protocol_version: 1.0` hub; `aud` defaults to the hub's own URL when not set
 * Require `symfony/mercure` `^0.8`
+* Follow `symfony/mercure`'s `Hub`/`FrankenPhpHub` constructor parameter reorder (`$cookieName` before `$protocolVersion`) and its `Grant`-based `TokenFactoryInterface::create()`; `jwt.subscribe`/`jwt.publish` are now wired in as one `publish` and one `subscribe` `Grant`, always both present so the legacy claim's shape is unchanged for hubs configuring neither
 
 0.4.3
 -----

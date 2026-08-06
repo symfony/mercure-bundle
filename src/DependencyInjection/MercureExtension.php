@@ -35,6 +35,7 @@ use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
 use Symfony\Component\Mercure\Jwt\DefaultClaimsTokenFactory;
 use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
@@ -120,11 +121,19 @@ final class MercureExtension extends Extension
                         ->addArgument([new Reference($tokenFactory), 'create']);
                     $tokenFactory = '.lazy.'.$tokenFactory;
 
+                    // Always grant both actions, even over an empty topic list: this preserves the
+                    // legacy claim's exact historical shape (a "mercure" object with "publish"/"subscribe"
+                    // keys, always present) for hubs that configure neither "jwt.subscribe" nor
+                    // "jwt.publish". Under protocol 1.0 an empty-topics grant is inert either way.
+                    $grants = [
+                        new Grant([Grant::ACTION_PUBLISH], $hub['jwt']['publish'] ?? []),
+                        new Grant([Grant::ACTION_SUBSCRIBE], $hub['jwt']['subscribe'] ?? []),
+                    ];
+
                     $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
                     $container->register($tokenProvider, FactoryTokenProvider::class)
                         ->addArgument(new Reference($tokenFactory))
-                        ->addArgument($hub['jwt']['subscribe'] ?? [])
-                        ->addArgument($hub['jwt']['publish'] ?? [])
+                        ->addArgument($grants)
                         ->addTag('mercure.jwt.factory');
 
                     $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
@@ -163,8 +172,8 @@ final class MercureExtension extends Extension
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
-                    ->addArgument($protocolVersion)
                     ->addArgument($cookieName)
+                    ->addArgument($protocolVersion)
                     ->addTag('mercure.hub');
             } else {
                 $container->register($hubId, Hub::class)
@@ -173,8 +182,8 @@ final class MercureExtension extends Extension
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addArgument($hub['public_url'])
                     ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
-                    ->addArgument($protocolVersion)
                     ->addArgument($cookieName)
+                    ->addArgument($protocolVersion)
                     ->addTag('mercure.hub');
             }
 
