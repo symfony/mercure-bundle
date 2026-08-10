@@ -78,7 +78,7 @@ final class MercureExtension extends Extension
         $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $builtinHub = !isset($hub['url']);
-            $protocolVersion = '1.0' === $hub['protocol_version'] ? ProtocolVersion::V1 : ProtocolVersion::Legacy;
+            $protocolVersion = ProtocolVersion::from($hub['protocol_version']);
             $cookieName = $hub['cookie_name'];
 
             $tokenFactory = null;

@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Mercure\FrankenPhpHub;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
  * MercureExtension configuration structure.
@@ -93,8 +94,8 @@ final class Configuration implements ConfigurationInterface
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
         ->enumNode('protocol_version')
-            ->values(['0.x', '1.0'])
-            ->defaultValue('0.x') // flip to '1.0' in a future release once Mercure hub 1.0 is tagged stable; nothing else here should need to change
+            ->values(array_column(ProtocolVersion::cases(), 'value'))
+            ->defaultValue(ProtocolVersion::Legacy->value) // flip to V1 in a future release once Mercure hub 1.0 is tagged stable; nothing else here should need to change
             ->info('The Mercure protocol version spoken by this hub: "0.x" (default) or "1.0". Affects the default cookie name, the JWT claim shape built by "jwt.secret", and how the mercure() Twig function interprets matcher-typed topics.')
         ->end()
         ->scalarNode('cookie_name')
