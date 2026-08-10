@@ -12,3 +12,10 @@ parameters:
 			reportUnmatched: false
 			paths:
 				- tests/*
+		# the is_a() check dispatches between Twig 3 (class extensions) and Twig 4 (attribute
+		# extensions); whichever Twig version is installed, PHPStan sees its outcome as constant
+		-
+			message: "#^Call to function is_a\\(\\) with arguments .* will always evaluate to (true|false)\\.$#"
+			reportUnmatched: false
+			paths:
+				- src/DependencyInjection/MercureExtension.php
