@@ -83,7 +83,7 @@ final class Configuration implements ConfigurationInterface
                     ->arrayNode('claims')
                         ->useAttributeAsKey('name')
                         ->variablePrototype()->end()
-                        ->info('Additional claims for the JWT built when using "secret", e.g. "iss"/"sub"/"client_id", required by RFC 9068 access tokens under "protocol_version: 1.0". "aud" defaults to this hub\'s URL when not set here.')
+                        ->info('Additional claims for the JWT built when using "secret", e.g. "iss"/"sub"/"client_id", required by RFC 9068 access tokens under "protocol_version: 1.0". "aud" defaults to this hub\'s "public_url" (or "url") when not set here; a 1.0 hub derives its expected audience from each request, so when publishing through an internal "url" distinct from "public_url", pin the hub\'s "resource_identifier" or set "aud" explicitly.')
                     ->end()
                 ->end()
         ->end()

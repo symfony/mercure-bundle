@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\Tests\DependencyInjection;
 use Lcobucci\JWT\Signer\Key;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
@@ -265,7 +266,7 @@ class MercureExtensionTest extends TestCase
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
     }
 
-    public function testExtensionProtocolVersion1_0()
+    public function testExtensionProtocolVersion10()
     {
         $config = [
             'mercure' => [
@@ -321,6 +322,7 @@ class MercureExtensionTest extends TestCase
                         'url' => 'https://demo.mercure.rocks/hub',
                         'jwt' => [
                             'secret' => '!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'],
                         ],
                         'protocol_version' => '1.0',
                     ],
@@ -338,6 +340,79 @@ class MercureExtensionTest extends TestCase
         // the legacy claim, protocol 1.0 must not leave this factory's default lifetime as "unset".
         $this->assertSame(0, $definition->getArgument(2));
         $this->assertSame(ProtocolVersion::V1, $definition->getArgument(4));
+    }
+
+    public function testV1HubWithSecretButWithoutRequiredClaimsFailsAtCompileTime()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('The "mercure.hubs.default.jwt.claims" option must define the "sub", "client_id" claim(s)');
+
+        (new MercureExtension())->load($config, new ContainerBuilder(new ParameterBag(['kernel.debug' => false])));
+    }
+
+    public function testLegacyHubWithoutClaimsIsNotWrappedInDefaultClaims()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        // a 0.x hub without "jwt.claims" must keep minting byte-identical legacy tokens: no
+        // DefaultClaimsTokenFactory wrapper, no auto-derived "aud" claim
+        $this->assertFalse($container->hasDefinition('mercure.hub.default.jwt.factory.default_claims'));
+    }
+
+    public function testLegacyHubWithExplicitClaimsIsWrappedWithoutAudDefault()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        // explicitly configured claims are honored on a 0.x hub, but the "aud" default stays
+        // protocol 1.0 only: the legacy protocol has no audience expectation
+        $this->assertSame(
+            ['iss' => 'https://example.com'],
+            $container->getDefinition('mercure.hub.default.jwt.factory.default_claims')->getArgument(1)
+        );
     }
 
     public function testV1HubWithSecretAndClaimsMintsATokenEndToEnd()
@@ -368,7 +443,7 @@ class MercureExtensionTest extends TestCase
         $container->compile();
 
         // The whole point of this test: FactoryTokenProvider must actually forward the "claims"
-        // (plus the auto-derived "aud") down to WebTokenFactory, or this throws.
+        // (plus the auto-derived "aud") down to LcobucciFactory, or this throws.
         $jwt = $container->get(HubRegistry::class)->getHub()->getProvider()->getJwt();
 
         $this->assertMatchesRegularExpression('/^[\w-]+\.[\w-]+\.[\w-]+$/', $jwt);
@@ -442,7 +517,7 @@ class MercureExtensionTest extends TestCase
 
 // Stub for mercure_publish()
 if (!\function_exists('mercure_publish')) {
-    function mercure_publish()
+    function mercure_publish(): void
     {
     }
 }
