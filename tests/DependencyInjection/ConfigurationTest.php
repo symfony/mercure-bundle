@@ -40,7 +40,7 @@ class ConfigurationTest extends TestCase
         $this->assertNull($config['hubs']['default']['cookie_name']);
     }
 
-    public function testProtocolVersionAcceptsExplicit1_0()
+    public function testProtocolVersionAcceptsExplicit10()
     {
         $config = $this->process([
             'hubs' => [
@@ -99,5 +99,4 @@ class ConfigurationTest extends TestCase
 
         $this->assertSame(['iss' => 'https://example.com', 'sub' => 'https://example.com'], $config['hubs']['default']['jwt']['claims']);
     }
-
 }
