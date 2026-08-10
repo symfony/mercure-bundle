@@ -443,6 +443,27 @@ class MercureExtensionTest extends TestCase
         $this->assertSame('https://example.com/jwks.json', $definition->getArgument('$jwksUri'));
         $this->assertSame('key1', $definition->getArgument('$keyId'));
         $this->assertSame(0, $definition->getArgument('$jwtLifetime'));
+        // WebTokenFactory names algorithms by their JWA name, LcobucciFactory does not
+        $this->assertSame('HS256', $definition->getArgument('$algorithm'));
+    }
+
+    public function testSecretHubDefaultsToTheLcobucciAlgorithmName()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => ['secret' => '!ChangeMe!'],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertSame('hmac.sha256', $container->getDefinition('mercure.hub.default.jwt.factory')->getArgument(1));
     }
 
     public function testJwksUriWithoutWebTokenLibraryThrows()

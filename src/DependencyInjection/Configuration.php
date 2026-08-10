@@ -80,7 +80,8 @@ final class Configuration implements ConfigurationInterface
                     ->end()
                     ->scalarNode('secret')->info('The JWT Secret to use.')->example('!ChangeMe!')->end()
                     ->scalarNode('passphrase')->info('The JWT secret passphrase.')->defaultValue('')->end()
-                    ->scalarNode('algorithm')->info('The algorithm to use to sign the JWT')->defaultValue('hmac.sha256')->end()
+                    // no default: the two token factories name algorithms differently, so the default depends on which one "secret"/"jwks_uri" selects. See MercureExtension::registerTokenFactory().
+                    ->scalarNode('algorithm')->info('The algorithm to use to sign the JWT. With "secret", one of LcobucciFactory::SIGN_ALGORITHMS ("hmac.sha256", the default). With "jwks_uri", a JWA name from WebTokenFactory::SIGN_ALGORITHMS ("HS256", the default).')->end()
                     ->scalarNode('jwks_uri')->info('URL of a JSON Web Key Set (JWKS) to fetch the signing key from, instead of "secret". Requires "protocol_version: 1.0" and "web-token/jwt-library".')->end()
                     ->scalarNode('key_id')->info('The "kid" of the key to select from "jwks_uri", required when the key set holds more than one matching key.')->end()
                     ->arrayNode('claims')

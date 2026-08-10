@@ -358,7 +358,7 @@ final class MercureExtension extends Extension
         if (!isset($hub['jwt']['jwks_uri'])) {
             $container->register($tokenFactory, LcobucciFactory::class)
                 ->addArgument($hub['jwt']['secret'])
-                ->addArgument($hub['jwt']['algorithm'])
+                ->addArgument($hub['jwt']['algorithm'] ?? 'hmac.sha256')
                 // RFC 9068 access tokens are expected to carry an "exp" claim; a resource server may
                 // reject one that doesn't. The legacy "mercure" claim has no such expectation, so only
                 // protocol 1.0 gets an automatic lifetime here, preserving the 0.x non-expiring default.
@@ -378,7 +378,7 @@ final class MercureExtension extends Extension
             ->setFactory([WebTokenFactory::class, 'fromJwksUri'])
             ->setArgument('$jwksUri', $hub['jwt']['jwks_uri'])
             ->setArgument('$httpClient', new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
-            ->setArgument('$algorithm', $hub['jwt']['algorithm'])
+            ->setArgument('$algorithm', $hub['jwt']['algorithm'] ?? 'HS256')
             ->setArgument('$keyId', $hub['jwt']['key_id'] ?? null)
             // this branch only exists for protocol 1.0 (the "jwks_uri" config option requires it),
             // so, unlike LcobucciFactory's, this lifetime default is unconditional; see the comment there.
