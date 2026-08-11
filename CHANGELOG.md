@@ -4,7 +4,9 @@ CHANGELOG
 0.4.3
 -----
 
+* Extend the `Extension` class from the `DependencyInjection` component
 * Bound the `symfony/mercure` dependency to supported versions
+* Fix `branch-alias`
 
 0.4.2
 -----
