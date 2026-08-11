@@ -92,6 +92,9 @@ class MercureExtensionTest extends TestCase
                             'subscribe' => 'https://example.com/book/1.jsonld',
                         ],
                     ],
+                    'builtin' => [
+                        'public_url' => 'https://example.com/.well-known/mercure',
+                    ],
                 ],
             ],
         ];
@@ -146,6 +149,25 @@ class MercureExtensionTest extends TestCase
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $managed2TokenProvider', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $managed2TokenFactory', $container->getAliases());
+
+        $this->assertTrue($container->hasDefinition('mercure.hub.builtin')); // Hub instance
+        $this->assertFalse($container->hasDefinition('mercure.hub.builtin.publisher')); // Publisher
+        $this->assertFalse($container->hasDefinition('mercure.hub.builtin.jwt.provider'));
+        $this->assertFalse($container->hasDefinition('mercure.hub.builtin.jwt.factory'));
+        $this->assertSame($config['mercure']['hubs']['builtin']['public_url'], $container->getDefinition('mercure.hub.builtin')->getArgument(0));
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $builtin', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\PublisherInterface $builtin', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $builtin', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $builtin', $container->getAliases());
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $builtinHub', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\PublisherInterface $builtinPublisher', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $builtinProvider', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $builtinFactory', $container->getAliases());
+
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $builtinTokenProvider', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $builtinTokenFactory', $container->getAliases());
 
         $this->assertTrue($container->hasDefinition('mercure.hub.demo')); // Hub instance
         $this->assertTrue($container->hasDefinition('mercure.hub.demo.publisher')); // Publisher

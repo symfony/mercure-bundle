@@ -169,10 +169,10 @@ final class MercureExtension extends Extension
                     ->addTag('mercure.hub');
             }
 
-            if (!$builtinHub) {
-                $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
-                $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+            $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
+            $container->registerAliasForArgument($hubId, HubInterface::class, $name);
 
+            if (!$builtinHub) {
                 $publisherDefinition = $container->register($publisherId, Publisher::class)
                     ->addArgument($hub['url'])
                     ->addArgument(new Reference($tokenProvider))
