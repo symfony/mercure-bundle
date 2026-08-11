@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Mercure\FrankenPhpHub;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
  * MercureExtension configuration structure.
@@ -80,6 +81,11 @@ final class Configuration implements ConfigurationInterface
                     ->scalarNode('secret')->info('The JWT Secret to use.')->example('!ChangeMe!')->end()
                     ->scalarNode('passphrase')->info('The JWT secret passphrase.')->defaultValue('')->end()
                     ->scalarNode('algorithm')->info('The algorithm to use to sign the JWT')->defaultValue('hmac.sha256')->end()
+                    ->arrayNode('claims')
+                        ->useAttributeAsKey('name')
+                        ->variablePrototype()->end()
+                        ->info('Additional claims for the JWT built when using "secret", e.g. "iss"/"sub"/"client_id", required by RFC 9068 access tokens under "protocol_version: 1.0". "aud" defaults to this hub\'s "public_url" (or "url") when not set here; a 1.0 hub derives its expected audience from each request, so when publishing through an internal "url" distinct from "public_url", pin the hub\'s "resource_identifier" or set "aud" explicitly.')
+                    ->end()
                 ->end()
         ->end()
         ->scalarNode('jwt_provider')
@@ -87,21 +93,30 @@ final class Configuration implements ConfigurationInterface
             ->setDeprecated('symfony/mercure-bundle', '0.3', 'The child node "%node%" at path "%path%" is deprecated, use "jwt.provider" instead.')
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
+        ->enumNode('protocol_version')
+            ->values(array_column(ProtocolVersion::cases(), 'value'))
+            ->defaultValue(ProtocolVersion::Legacy->value) // flip to V1 in a future release once Mercure hub 1.0 is tagged stable; nothing else here should need to change
+            ->info('The Mercure protocol version spoken by this hub: "0.x" (default) or "1.0". Affects the default cookie name, the JWT claim shape built by "jwt.secret", and how the mercure() Twig function interprets matcher-typed topics.')
+        ->end()
+        ->scalarNode('cookie_name')
+            ->defaultNull()
+            ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" ("mercureAuthorization" for "0.x", "__Secure-mercure_access_token" for "1.0") when not set.')
+        ->end()
                             ->end()
                             ->validate()
-        ->ifTrue(function ($v) { return isset($v['jwt'], $v['jwt_provider']); })
+        ->ifTrue(static function ($v) { return isset($v['jwt'], $v['jwt_provider']); })
         ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
                             ->end()
                             ->validate()
-        ->ifTrue(function ($v) { return isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']); })
+        ->ifTrue(static function ($v) { return isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']); })
         ->thenInvalid('You must specify at least one of "jwt", and "jwt_provider".')
                             ->end()
                             ->validate()
-        ->ifTrue(function ($v) { return isset($v['jwt']['value'], $v['jwt']['provider']); })
+        ->ifTrue(static function ($v) { return isset($v['jwt']['value'], $v['jwt']['provider']); })
         ->thenInvalid('"jwt.value" and "jwt.provider" cannot be used together.')
                             ->end()
                             ->validate()
-        ->ifTrue(function ($v) { return isset($v['jwt']) && !isset($v['jwt']['value']) && !isset($v['jwt']['provider']) && !isset($v['jwt']['factory']) && !isset($v['jwt']['secret']); })
+        ->ifTrue(static function ($v) { return isset($v['jwt']) && !isset($v['jwt']['value']) && !isset($v['jwt']['provider']) && !isset($v['jwt']['factory']) && !isset($v['jwt']['secret']); })
         ->thenInvalid('You must specify at least one of "jwt.value", "jwt.provider", "jwt.factory", and "jwt.secret".')
                             ->end()
                         ->end()

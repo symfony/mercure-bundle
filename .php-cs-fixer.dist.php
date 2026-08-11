@@ -42,6 +42,9 @@ return (new PhpCsFixer\Config)
         'ternary_to_null_coalescing' => true,
         'native_function_invocation' => ['include' => ['@compiler_optimized'], 'scope' => 'namespaced'],
         'nullable_type_declaration_for_default_null_value' => true,
+        // test-case methods are kept return-type-less by a separate Fabbot check;
+        // @Symfony:risky's void_return otherwise fights that check on every PR touching tests
+        'void_return' => false,
     ])
     ->setFinder($finder)
 ;
