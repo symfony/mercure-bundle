@@ -42,6 +42,7 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
+use Symfony\Component\Mercure\RemoteHubInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
@@ -172,6 +173,8 @@ final class MercureExtension extends Extension
             if (!$builtinHub) {
                 $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, "{$name}Hub");
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, $name);
 
                 $publisherDefinition = $container->register($publisherId, Publisher::class)
                     ->addArgument($hub['url'])
@@ -257,6 +260,7 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(HubInterface::class, $defaultHubId);
+        $container->setAlias(RemoteHubInterface::class, $defaultHubId);
 
         if (null !== $defaultPublisher) {
             $this->deprecate(
