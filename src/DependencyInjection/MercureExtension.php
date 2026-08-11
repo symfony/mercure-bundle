@@ -14,9 +14,12 @@ declare(strict_types=1);
 namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
+use Symfony\Bundle\MercureBundle\HubChooser;
+use Symfony\Bundle\MercureBundle\PublisherChooser;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
 use Symfony\Component\DependencyInjection\Compiler\AliasDeprecatedPublicServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -74,6 +77,7 @@ final class MercureExtension extends Extension
         $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $builtinHub = !isset($hub['url']);
+            $lazyHubResolve = isset($hub['url']) && str_contains($hub['url'], 'env_');
 
             $tokenFactory = null;
             $tokenProvider = null;
@@ -154,7 +158,33 @@ final class MercureExtension extends Extension
                 $defaultPublisher = $publisherId;
             }
 
-            if ($builtinHub) {
+            if ($lazyHubResolve) {
+                $hubChooserId = \sprintf('mercure.hub.%s.chooser', $name);
+                $externalHubId = \sprintf('mercure.hub.%s.external_hub', $name);
+                $builtinHubId = \sprintf('mercure.hub.%s.builtin_hub', $name);
+
+                $container->register($hubId, HubInterface::class)
+                    ->setFactory([new Reference($hubChooserId), 'chooseHub'])
+                    ->addArgument($hub['url'])
+                    ->addTag('mercure.hub');
+
+                $container->register($hubChooserId, HubChooser::class)
+                    ->addArgument(new ServiceLocatorArgument([
+                        'external' => new Reference($externalHubId),
+                        'builtin' => new Reference($builtinHubId),
+                    ]));
+
+                $container->register($externalHubId, Hub::class)
+                    ->addArgument($hub['url'])
+                    ->addArgument(new Reference($tokenProvider))
+                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                    ->addArgument($hub['public_url'])
+                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE));
+
+                $container->register($builtinHubId, FrankenPhpHub::class)
+                    ->addArgument($hub['public_url'])
+                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null);
+            } elseif ($builtinHub) {
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
@@ -169,7 +199,44 @@ final class MercureExtension extends Extension
                     ->addTag('mercure.hub');
             }
 
-            if (!$builtinHub) {
+            if ($lazyHubResolve) {
+                $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
+                $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+
+                $publisherChooserId = \sprintf('mercure.hub.%s.publisher_chooser', $name);
+                $externalPublisherId = \sprintf('mercure.hub.%s.external_publisher', $name);
+
+                $container->register($publisherId, PublisherInterface::class)
+                    ->setFactory([new Reference($publisherChooserId), 'choosePublisher'])
+                    ->addArgument($hub['url'])
+                    ->addTag('mercure.publisher');
+
+                $container->register($publisherChooserId, PublisherChooser::class)
+                    ->addArgument(new ServiceLocatorArgument([
+                        'external' => new Reference($externalPublisherId),
+                    ]));
+
+                $publisherDefinition = $container->register($externalPublisherId, Publisher::class)
+                    ->addArgument($hub['url'])
+                    ->addArgument(new Reference($tokenProvider))
+                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->setLazy(true);
+
+                $this->deprecate(
+                    $publisherDefinition,
+                    'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
+
+                $this->deprecate(
+                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, "{$name}Publisher"),
+                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
+
+                $this->deprecate(
+                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, $name),
+                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
+                );
+            } elseif (!$builtinHub) {
                 $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, HubInterface::class, $name);
 
@@ -204,7 +271,7 @@ final class MercureExtension extends Extension
                 ->addTag('messenger.message_handler', $attributes);
 
             if ($enableProfiler) {
-                if (!$builtinHub) {
+                if (!$builtinHub || $lazyHubResolve) {
                     $traceablePublisher = $container->register("$publisherId.traceable", TraceablePublisher::class)
                         ->setDecoratedService($publisherId)
                         ->addArgument(new Reference("$publisherId.traceable.inner"))
