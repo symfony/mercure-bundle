@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.4.3
+-----
+
+* Bound the `symfony/mercure` dependency to supported versions
+
 0.4.2
 -----
 
