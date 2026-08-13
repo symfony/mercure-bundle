@@ -17,9 +17,7 @@ use Jose\Component\Core\JWK;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
-use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
-use Symfony\Component\DependencyInjection\Compiler\AliasDeprecatedPublicServicesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
@@ -27,7 +25,6 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Mercure\Debug\TraceableHub;
-use Symfony\Component\Mercure\Debug\TraceablePublisher;
 use Symfony\Component\Mercure\Discovery;
 use Symfony\Component\Mercure\EventSubscriber\SetCookieSubscriber;
 use Symfony\Component\Mercure\FrankenPhpHub;
@@ -39,15 +36,12 @@ use Symfony\Component\Mercure\Jwt\DefaultClaimsTokenFactory;
 use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
 use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
-use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\ProtocolVersion;
-use Symfony\Component\Mercure\Publisher;
-use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
@@ -77,7 +71,6 @@ final class MercureExtension extends Extension
             return;
         }
 
-        $defaultPublisher = null;
         $defaultHubId = null;
         $traceableHubs = [];
         $hubs = [];
@@ -97,16 +90,6 @@ final class MercureExtension extends Extension
                     $container->register($tokenProvider, StaticTokenProvider::class)
                         ->addArgument($hub['jwt']['value'])
                         ->addTag('mercure.jwt.provider');
-
-                    // TODO: remove the following definition in 0.4
-                    $jwtProvider = \sprintf('mercure.hub.%s.jwt_provider', $name);
-                    $jwtProviderDefinition = $container->register($jwtProvider, StaticJwtProvider::class)
-                        ->addArgument($hub['jwt']['value']);
-
-                    $this->deprecate(
-                        $jwtProviderDefinition,
-                        'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$tokenProvider.'" instead.'
-                    );
                 } elseif (isset($hub['jwt']['provider'])) {
                     $tokenProvider = $hub['jwt']['provider'];
                 } else {
@@ -179,12 +162,10 @@ final class MercureExtension extends Extension
             }
 
             $hubId = \sprintf('mercure.hub.%s', $name);
-            $publisherId = \sprintf('mercure.hub.%s.publisher', $name);
             $hubs[$name] = new Reference($hubId);
-            if (!$defaultPublisher && ($config['default_hub'] ?? $name) === $name) {
+            if (null === $defaultHubId && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
-                $defaultPublisher = $publisherId;
             }
 
             if ($builtinHub) {
@@ -204,32 +185,9 @@ final class MercureExtension extends Extension
                     ->addArgument($cookieName)
                     ->addArgument($protocolVersion)
                     ->addTag('mercure.hub');
-            }
 
-            if (!$builtinHub) {
                 $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, HubInterface::class, $name);
-
-                $publisherDefinition = $container->register($publisherId, Publisher::class)
-                    ->addArgument($hub['url'])
-                    ->addArgument(new Reference($tokenProvider))
-                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
-                    ->addTag('mercure.publisher');
-
-                $this->deprecate(
-                    $publisherDefinition,
-                    'The "%service_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-                );
-
-                $this->deprecate(
-                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, "{$name}Publisher"),
-                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-                );
-
-                $this->deprecate(
-                    $container->registerAliasForArgument($publisherId, PublisherInterface::class, $name),
-                    'The "%alias_id%" service is deprecated. You should stop using it, as it will be removed in the future, use "'.$hubId.'" instead.'
-                );
             }
 
             $bus = $hub['bus'] ?? null;
@@ -241,20 +199,6 @@ final class MercureExtension extends Extension
                 ->addTag('messenger.message_handler', $attributes);
 
             if ($enableProfiler) {
-                if (!$builtinHub) {
-                    $traceablePublisher = $container->register("$publisherId.traceable", TraceablePublisher::class)
-                        ->setDecoratedService($publisherId)
-                        ->addArgument(new Reference("$publisherId.traceable.inner"))
-                        ->addArgument(new Reference('debug.stopwatch'));
-
-                    $this->deprecate(
-                        $traceablePublisher,
-                        'The "%service_id%" service is deprecated. Use "'.$hubId.'.traceable" instead.'
-                    );
-
-                    $traceableHubs[$name] = new Reference("$publisherId.traceable");
-                }
-
                 $container->register("$hubId.traceable", TraceableHub::class)
                     ->setDecoratedService($hubId)
                     ->addArgument(new Reference("$hubId.traceable.inner"))
@@ -294,18 +238,6 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(HubInterface::class, $defaultHubId);
-
-        if (null !== $defaultPublisher) {
-            $this->deprecate(
-                $container->setAlias(Publisher::class, $defaultPublisher),
-                'The "%alias_id%" service alias is deprecated. Use "'.Hub::class.'" instead.'
-            );
-
-            $this->deprecate(
-                $container->setAlias(PublisherInterface::class, $defaultPublisher),
-                'The "%alias_id%" service alias is deprecated. Use "'.HubInterface::class.'" instead.'
-            );
-        }
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))
@@ -386,18 +318,5 @@ final class MercureExtension extends Extension
             ->addTag('mercure.jwt.factory');
 
         return $tokenFactory;
-    }
-
-    /**
-     * @param Definition|Alias $definition
-     */
-    private function deprecate($definition, string $message): void
-    {
-        if (class_exists(AliasDeprecatedPublicServicesPass::class)) {
-            $definition->setDeprecated('symfony/mercure-bundle', '0.2', $message);
-        } else {
-            /* @phpstan-ignore-next-line */
-            $definition->setDeprecated(true, $message);
-        }
     }
 }
