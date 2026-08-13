@@ -17,17 +17,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 use Symfony\Component\Mercure\Debug\TraceableHub;
-use Symfony\Component\Mercure\Debug\TraceablePublisher;
 
 final class MercureDataCollector extends DataCollector
 {
     /**
-     * @var iterable<TraceablePublisher|TraceableHub>
+     * @var iterable<TraceableHub>
      */
     private $hubs;
 
     /**
-     * @param iterable<TraceablePublisher|TraceableHub> $hubs
+     * @param iterable<TraceableHub> $hubs
      */
     public function __construct(iterable $hubs)
     {

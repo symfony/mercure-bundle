@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+Unreleased
+----------
+
+* **BC break:** Stop registering the legacy `Publisher` / `PublisherInterface` / `TraceablePublisher` services and aliases, and the `StaticJwtProvider` service (`mercure.hub.*.jwt_provider`). Apps must use `Hub` / `HubInterface` / `TraceableHub` and `StaticTokenProvider` (`mercure.hub.*.jwt.provider`) instead. This removes the `symfony/mercure` 0.5 deprecations that were triggered on every container boot even when the Hub API was used exclusively (#121)
+
 0.5.0
 -----
 
