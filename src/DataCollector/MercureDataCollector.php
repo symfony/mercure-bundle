@@ -17,17 +17,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 use Symfony\Component\Mercure\Debug\TraceableHub;
-use Symfony\Component\Mercure\Debug\TraceablePublisher;
 
 final class MercureDataCollector extends DataCollector
 {
     /**
-     * @var iterable<TraceablePublisher|TraceableHub>
+     * @var iterable<TraceableHub>
      */
     private $hubs;
 
     /**
-     * @param iterable<TraceablePublisher|TraceableHub> $hubs
+     * @param iterable<TraceableHub> $hubs
      */
     public function __construct(iterable $hubs)
     {
@@ -40,7 +39,6 @@ final class MercureDataCollector extends DataCollector
             'count' => 0,
             'duration' => 0.0,
             'memory' => 0,
-            'publishers' => [],
         ];
 
         foreach ($this->hubs as $name => $hub) {
@@ -85,15 +83,5 @@ final class MercureDataCollector extends DataCollector
     public function getHubs(): iterable
     {
         return $this->data['hubs'];
-    }
-
-    /**
-     * @deprecated use {@see MercureDataCollector::getHubs()} instead
-     */
-    public function getPublishers(): iterable
-    {
-        trigger_deprecation('symfony/mercure-bundle', '0.3', 'Method "%s::getPublishers()" is deprecated, use "%s::getHubs()" instead.', __CLASS__, __CLASS__);
-
-        return $this->getHubs();
     }
 }
