@@ -16,12 +16,12 @@ namespace Symfony\Bundle\MercureBundle\Tests\DependencyInjection;
 use Lcobucci\JWT\Signer\Key;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
+use Symfony\Bundle\MercureBundle\HubFactory;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
-use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\Grant;
@@ -267,10 +267,6 @@ class MercureExtensionTest extends TestCase
 
     public function testExtensionBuiltin()
     {
-        if (!class_exists(FrankenPhpHub::class)) {
-            $this->markTestSkipped('FrankenPhpHub is not available (old version of symfony/mercure).');
-        }
-
         $config = [
             'mercure' => [
                 'hubs' => [
@@ -285,12 +281,47 @@ class MercureExtensionTest extends TestCase
         $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
         (new MercureExtension())->load($config, $container);
 
-        $this->assertTrue($container->hasDefinition('mercure.hub.default'));
-        $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
-        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(3));
-        $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
+        $definition = $container->getDefinition('mercure.hub.default');
+
+        $this->assertSame([HubFactory::class, 'create'], $definition->getFactory());
+        $this->assertNull($definition->getArgument(0));
+        $this->assertNull($definition->getArgument(1));
+        $this->assertNull($definition->getArgument(2));
+        $this->assertSame('https://demo.mercure.rocks/hub', $definition->getArgument(3));
+        $this->assertSame(ProtocolVersion::V1, $definition->getArgument(6));
+
+        // a built-in hub is autowirable too, which it was not while it was registered
+        // under a class of its own only when the extension guessed it at build time
+        $this->assertArrayHasKey('Symfony\\Component\\Mercure\\HubInterface $default', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\\Component\\Mercure\\HubInterface $defaultHub', $container->getAliases());
         $this->assertFalse($container->hasAlias(RemoteHubInterface::class));
-        $this->assertArrayNotHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
+        $this->assertArrayNotHasKey('Symfony\\Component\\Mercure\\RemoteHubInterface $default', $container->getAliases());
+    }
+
+    /**
+     * The report in #120: the recipe's "%env(default::MERCURE_URL)%" resolves to null under
+     * Docker Compose, which used to reach Hub::__construct() and fail on its string $url.
+     */
+    public function testExtensionBuiltinThroughAnEmptyUrlEnvironmentVariable()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => null,
+                        'public_url' => 'https://demo.mercure.rocks/hub',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $definition = $container->getDefinition('mercure.hub.default');
+
+        $this->assertSame([HubFactory::class, 'create'], $definition->getFactory());
+        $this->assertNull($definition->getArgument(0));
     }
 
     public function testExtensionProtocolVersion10()

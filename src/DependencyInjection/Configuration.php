@@ -16,7 +16,6 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 use Symfony\Component\Config\Definition\Builder\EnumNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
@@ -28,12 +27,10 @@ final class Configuration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder(): TreeBuilder
     {
-        $builtinPublish = class_exists(FrankenPhpHub::class) && \function_exists('mercure_publish');
-
         $treeBuilder = new TreeBuilder('mercure');
         $rootNode = $treeBuilder->getRootNode();
 
-        $urlNode = $rootNode
+        $rootNode
                 ->fixXmlConfig('hub')
                 ->children()
                     ->arrayNode('hubs')
@@ -41,20 +38,10 @@ final class Configuration implements ConfigurationInterface
                         ->normalizeKeys(false)
                         ->arrayPrototype()
                             ->children()
-                                ->scalarNode('url')->info('URL of the hub\'s publish endpoint')->example('https://demo.mercure.rocks/.well-known/mercure');
-
-        if ($builtinPublish) {
-            $urlNode->defaultNull();
-        }
-
-        $publicUrlNode = $urlNode->end()
-        ->scalarNode('public_url')->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure');
-
-        if (!$builtinPublish) {
-            $publicUrlNode->defaultNull();
-        }
-
-        $publicUrlNode->end()
+                                // both default to null: which hub implementation an empty "url" selects is
+                                // decided at runtime by HubFactory, not here. See HubFactory::create().
+                                ->scalarNode('url')->defaultNull()->info('URL of the hub\'s publish endpoint. Leave empty to publish through FrankenPHP\'s built-in Mercure hub.')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
+        ->scalarNode('public_url')->defaultNull()->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
         ->arrayNode('jwt')
             ->beforeNormalization()
                 ->ifString()
