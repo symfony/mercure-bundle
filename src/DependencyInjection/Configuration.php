@@ -40,8 +40,8 @@ final class Configuration implements ConfigurationInterface
                             ->children()
                                 // both default to null: which hub implementation an empty "url" selects is
                                 // decided at runtime by HubFactory, not here. See HubFactory::create().
-                                ->scalarNode('url')->defaultNull()->info('URL of the hub\'s publish endpoint. Leave empty to publish through FrankenPHP\'s built-in Mercure hub.')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
-        ->scalarNode('public_url')->defaultNull()->info('URL of the hub\'s public endpoint')->example('https://demo.mercure.rocks/.well-known/mercure')->end()
+                                ->scalarNode('url')->defaultNull()->info("URL of the hub's publish endpoint. Leave empty to publish through FrankenPHP's built-in Mercure hub.")->example('https://demo.mercure.rocks/.well-known/mercure')->end()
+                                ->scalarNode('public_url')->defaultNull()->info("URL of the hub's public endpoint")->example('https://demo.mercure.rocks/.well-known/mercure')->end()
         ->arrayNode('jwt')
             ->beforeNormalization()
                 ->ifString()
