@@ -187,6 +187,8 @@ final class MercureExtension extends Extension
                 $defaultPublisher = $publisherId;
             }
 
+            $httpClient = isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE);
+
             if ($builtinHub) {
                 $container->register($hubId, FrankenPhpHub::class)
                     ->addArgument($hub['public_url'])
@@ -200,7 +202,7 @@ final class MercureExtension extends Extension
                     ->addArgument(new Reference($tokenProvider))
                     ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
                     ->addArgument($hub['public_url'])
-                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument($httpClient)
                     ->addArgument($cookieName)
                     ->addArgument($protocolVersion)
                     ->addTag('mercure.hub');
@@ -213,7 +215,7 @@ final class MercureExtension extends Extension
                 $publisherDefinition = $container->register($publisherId, Publisher::class)
                     ->addArgument($hub['url'])
                     ->addArgument(new Reference($tokenProvider))
-                    ->addArgument(new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                    ->addArgument($httpClient)
                     ->addTag('mercure.publisher');
 
                 $this->deprecate(

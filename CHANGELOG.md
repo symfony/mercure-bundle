@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.6.0
+-----
+
+* Add the `http_client` per-hub option, to publish through a dedicated HTTP client service (e.g. a scoped client with a short timeout)
+
 0.5.0
 -----
 
