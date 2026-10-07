@@ -73,6 +73,7 @@ final class MercureExtension extends Extension
         }
 
         $defaultHubId = null;
+        $defaultHubIsRemote = false;
         $traceableHubs = [];
         $hubs = [];
         $defaultHubName = null;
@@ -167,6 +168,7 @@ final class MercureExtension extends Extension
             if (null === $defaultHubId && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
+                $defaultHubIsRemote = !$builtinHub;
             }
 
             $httpClient = isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE);
@@ -243,7 +245,9 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(HubInterface::class, $defaultHubId);
-        $container->setAlias(RemoteHubInterface::class, $defaultHubId);
+        if ($defaultHubIsRemote) {
+            $container->setAlias(RemoteHubInterface::class, $defaultHubId);
+        }
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))

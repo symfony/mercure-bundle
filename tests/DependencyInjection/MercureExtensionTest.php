@@ -28,6 +28,7 @@ use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\ProtocolVersion;
+use Symfony\Component\Mercure\RemoteHubInterface;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -286,6 +287,8 @@ class MercureExtensionTest extends TestCase
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
         $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(3));
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
+        $this->assertFalse($container->hasAlias(RemoteHubInterface::class));
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
     }
 
     public function testExtensionProtocolVersion10()
