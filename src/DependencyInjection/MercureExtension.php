@@ -175,8 +175,7 @@ final class MercureExtension extends Extension
                     ->setDecoratedService($hubId)
                     ->addArgument(new Reference("$hubId.traceable.inner"))
                     ->addArgument(new Reference('debug.stopwatch'))
-                    // not autoconfigured: without the tag, long-running processes (e.g. FrankenPHP's
-                    // worker mode) would pile up every request's messages in the profiler
+                    // not autoconfigured: without it, worker mode piles up every request's messages
                     ->addTag('kernel.reset', ['method' => 'reset']);
 
                 $traceableHubs[$name] = new Reference("$hubId.traceable");
