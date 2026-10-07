@@ -26,6 +26,31 @@ class ConfigurationTest extends TestCase
         return (new Processor())->processConfiguration(new Configuration(), [$config]);
     }
 
+    public function testUrlAndPublicUrlDefaultToNull()
+    {
+        $config = $this->process([
+            'hubs' => [
+                'default' => [
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'foo.bar.baz',
+                ],
+            ],
+        ]);
+
+        $this->assertNull($config['hubs']['default']['public_url']);
+
+        $config = $this->process([
+            'hubs' => [
+                'default' => [
+                    'public_url' => 'https://demo.mercure.rocks/hub',
+                ],
+            ],
+        ]);
+
+        // no "url", and therefore no "jwt" required: HubFactory reads that as the built-in hub
+        $this->assertNull($config['hubs']['default']['url']);
+    }
+
     public function testProtocolVersionDefaultsToV1Value()
     {
         $config = $this->process([

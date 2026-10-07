@@ -15,6 +15,7 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
 use Jose\Component\Core\JWK;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
+use Symfony\Bundle\MercureBundle\HubFactory;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -27,8 +28,6 @@ use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Discovery;
 use Symfony\Component\Mercure\EventSubscriber\SetCookieSubscriber;
-use Symfony\Component\Mercure\FrankenPhpHub;
-use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
@@ -80,7 +79,7 @@ final class MercureExtension extends Extension
         $debug = (bool) $container->getParameter('kernel.debug');
         $enableProfiler = ($config['enable_profiler'] ?? $debug) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
-            $builtinHub = !isset($hub['url']);
+            $remoteHub = null !== $hub['url'] && '' !== $hub['url'];
             $protocolVersion = $hub['protocol_version'];
             // browsers drop "__Secure-" cookies over plain HTTP; this is also the hub's "playground" default
             $cookieName = $hub['cookie_name'] ?? ($debug && ProtocolVersion::V1 === $protocolVersion ? 'mercure_access_token' : null);
@@ -170,31 +169,25 @@ final class MercureExtension extends Extension
             if (null === $defaultHubId && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
-                $defaultHubIsRemote = !$builtinHub;
+                $defaultHubIsRemote = $remoteHub;
             }
 
-            $httpClient = isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE);
+            // Hub or FrankenPhpHub: the decision needs the resolved "url", so it belongs to
+            // the factory, not here. Arguments mirror Hub::__construct().
+            $container->register($hubId, HubInterface::class)
+                ->setFactory([HubFactory::class, 'create'])
+                ->addArgument($hub['url'])
+                ->addArgument($tokenProvider ? new Reference($tokenProvider) : null)
+                ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
+                ->addArgument($hub['public_url'])
+                ->addArgument(isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
+                ->addArgument($cookieName)
+                ->addArgument($protocolVersion)
+                ->addTag('mercure.hub');
 
-            if ($builtinHub) {
-                $container->register($hubId, FrankenPhpHub::class)
-                    ->addArgument($hub['public_url'])
-                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
-                    ->addArgument($cookieName)
-                    ->addArgument($protocolVersion)
-                    ->addTag('mercure.hub');
-            } else {
-                $container->register($hubId, Hub::class)
-                    ->addArgument($hub['url'])
-                    ->addArgument(new Reference($tokenProvider))
-                    ->addArgument($tokenFactory ? new Reference($tokenFactory) : null)
-                    ->addArgument($hub['public_url'])
-                    ->addArgument($httpClient)
-                    ->addArgument($cookieName)
-                    ->addArgument($protocolVersion)
-                    ->addTag('mercure.hub');
-
-                $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
-                $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+            $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
+            $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+            if ($remoteHub) {
                 $container->registerAliasForArgument($hubId, RemoteHubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, RemoteHubInterface::class, $name);
             }
