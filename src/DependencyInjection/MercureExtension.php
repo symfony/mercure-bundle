@@ -42,6 +42,7 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\ProtocolVersion;
+use Symfony\Component\Mercure\RemoteHubInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
@@ -72,6 +73,7 @@ final class MercureExtension extends Extension
         }
 
         $defaultHubId = null;
+        $defaultHubIsRemote = false;
         $traceableHubs = [];
         $hubs = [];
         $defaultHubName = null;
@@ -166,6 +168,7 @@ final class MercureExtension extends Extension
             if (null === $defaultHubId && ($config['default_hub'] ?? $name) === $name) {
                 $defaultHubName = $name;
                 $defaultHubId = $hubId;
+                $defaultHubIsRemote = !$builtinHub;
             }
 
             $httpClient = isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE);
@@ -190,6 +193,8 @@ final class MercureExtension extends Extension
 
                 $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
                 $container->registerAliasForArgument($hubId, HubInterface::class, $name);
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, "{$name}Hub");
+                $container->registerAliasForArgument($hubId, RemoteHubInterface::class, $name);
             }
 
             $bus = $hub['bus'] ?? null;
@@ -240,6 +245,9 @@ final class MercureExtension extends Extension
         }
 
         $container->setAlias(HubInterface::class, $defaultHubId);
+        if ($defaultHubIsRemote) {
+            $container->setAlias(RemoteHubInterface::class, $defaultHubId);
+        }
 
         $container->register(HubRegistry::class)
             ->addArgument(new Reference($defaultHubId))

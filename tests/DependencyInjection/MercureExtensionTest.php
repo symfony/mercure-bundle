@@ -28,6 +28,7 @@ use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\ProtocolVersion;
+use Symfony\Component\Mercure\RemoteHubInterface;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -60,10 +61,12 @@ class MercureExtensionTest extends TestCase
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $default', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
         $this->assertArrayNotHasKey('Symfony\Component\Mercure\PublisherInterface $default', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $default', $container->getAliases());
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $defaultHub', $container->getAliases());
+        $this->assertArrayHasKey('Symfony\Component\Mercure\RemoteHubInterface $defaultHub', $container->getAliases());
         $this->assertArrayNotHasKey('Symfony\Component\Mercure\PublisherInterface $defaultPublisher', $container->getAliases());
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenProviderInterface $defaultProvider', $container->getAliases());
 
@@ -284,6 +287,8 @@ class MercureExtensionTest extends TestCase
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
         $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(3));
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
+        $this->assertFalse($container->hasAlias(RemoteHubInterface::class));
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
     }
 
     public function testExtensionProtocolVersion10()
