@@ -261,9 +261,34 @@ final class MercureExtensionTest extends TestCase
         (new MercureExtension())->load($config, $container);
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default.traceable'));
+        $this->assertSame([['method' => 'reset']], $container->getDefinition('mercure.hub.default.traceable')->getTag('kernel.reset'));
         $this->assertFalse($container->hasDefinition('mercure.hub.default.publisher'));
         $this->assertFalse($container->hasDefinition('mercure.hub.default.publisher.traceable'));
         $this->assertTrue($container->hasDefinition('data_collector.mercure'));
+    }
+
+    public function testUndefinedDefaultHubThrows()
+    {
+        $config = [
+            'mercure' => [
+                'default_hub' => 'missing',
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                    'other' => [
+                        'url' => 'https://other.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('The "mercure.default_hub" option refers to the "missing" hub, which is not defined. Defined hubs: "default", "other".');
+
+        (new MercureExtension())->load($config, new ContainerBuilder(new ParameterBag(['kernel.debug' => false])));
     }
 
     public function testExtensionBuiltin()
@@ -1039,12 +1064,5 @@ final class MercureExtensionTest extends TestCase
         $this->assertSame('.lazy.mercure.hub.default.jwt.factory', (string) $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
         $this->assertSame('.lazy.mercure.hub.default.jwt.factory', (string) $container->getDefinition('mercure.hub.default')->getArgument(2));
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
-    }
-}
-
-// Stub for mercure_publish()
-if (!\function_exists('mercure_publish')) {
-    function mercure_publish(): void
-    {
     }
 }

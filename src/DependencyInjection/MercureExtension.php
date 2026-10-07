@@ -174,7 +174,10 @@ final class MercureExtension extends Extension
                 $container->register("$hubId.traceable", TraceableHub::class)
                     ->setDecoratedService($hubId)
                     ->addArgument(new Reference("$hubId.traceable.inner"))
-                    ->addArgument(new Reference('debug.stopwatch'));
+                    ->addArgument(new Reference('debug.stopwatch'))
+                    // not autoconfigured: without the tag, long-running processes (e.g. FrankenPHP's
+                    // worker mode) would pile up every request's messages in the profiler
+                    ->addTag('kernel.reset', ['method' => 'reset']);
 
                 $traceableHubs[$name] = new Reference("$hubId.traceable");
             }
@@ -198,6 +201,10 @@ final class MercureExtension extends Extension
                     ->addArgument(new Reference($hubId))
                     ->addTag('turbo.broadcaster');
             }
+        }
+
+        if (null === $defaultHubId) {
+            throw new InvalidConfigurationException(\sprintf('The "mercure.default_hub" option refers to the "%s" hub, which is not defined. Defined hubs: "%s".', $config['default_hub'], implode('", "', array_keys($config['hubs']))));
         }
 
         if ($enableProfiler) {
