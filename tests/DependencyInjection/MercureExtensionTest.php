@@ -324,6 +324,28 @@ class MercureExtensionTest extends TestCase
         $this->assertNull($definition->getArgument(0));
     }
 
+    public function testEmptyUrlDoesNotAliasRemoteHubInterface()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => '',
+                        'public_url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $default', $container->getAliases());
+        $this->assertFalse($container->hasAlias(RemoteHubInterface::class));
+        $this->assertArrayNotHasKey('Symfony\Component\Mercure\RemoteHubInterface $default', $container->getAliases());
+    }
+
     public function testExtensionProtocolVersion10()
     {
         $config = [

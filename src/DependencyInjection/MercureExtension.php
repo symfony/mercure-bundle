@@ -79,7 +79,7 @@ final class MercureExtension extends Extension
         $debug = (bool) $container->getParameter('kernel.debug');
         $enableProfiler = ($config['enable_profiler'] ?? $debug) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
-            $remoteHub = null !== $hub['url'];
+            $remoteHub = null !== $hub['url'] && '' !== $hub['url'];
             $protocolVersion = $hub['protocol_version'];
             // browsers drop "__Secure-" cookies over plain HTTP; this is also the hub's "playground" default
             $cookieName = $hub['cookie_name'] ?? ($debug && ProtocolVersion::V1 === $protocolVersion ? 'mercure_access_token' : null);
