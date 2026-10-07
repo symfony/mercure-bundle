@@ -104,12 +104,4 @@ class HubFactoryTest extends TestCase
 
         HubFactory::create(null, null, null, null, null, null, ProtocolVersion::Legacy);
     }
-
-    public function testTheBuiltinHubCannotBePublishedToThroughTheLegacyPublisher()
-    {
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('use the hub service instead');
-
-        HubFactory::createPublisher(null, null, null);
-    }
 }

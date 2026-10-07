@@ -19,8 +19,6 @@ use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\ProtocolVersion;
-use Symfony\Component\Mercure\Publisher;
-use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -65,24 +63,5 @@ final class HubFactory
         }
 
         return new FrankenPhpHub($publicUrl, $tokenFactory, $cookieName, $protocolVersion);
-    }
-
-    /**
-     * @deprecated along with the "mercure.hub.*.publisher" services it builds
-     */
-    public static function createPublisher(
-        ?string $url,
-        ?TokenProviderInterface $tokenProvider,
-        ?HttpClientInterface $httpClient,
-    ): PublisherInterface {
-        if (null === $url || '' === $url) {
-            throw new \LogicException('FrankenPHP\'s built-in Mercure hub cannot be published to through the deprecated Publisher, which needs a hub "url": use the hub service instead.');
-        }
-
-        if (null === $tokenProvider) {
-            throw new \LogicException('A hub with a "url" needs a JSON Web Token to publish with: set one of the "jwt", "jwt.provider" or "jwt.factory" options.');
-        }
-
-        return new Publisher($url, $tokenProvider, $httpClient);
     }
 }

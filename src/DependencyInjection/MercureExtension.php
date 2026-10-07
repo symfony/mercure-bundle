@@ -28,7 +28,6 @@ use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Discovery;
 use Symfony\Component\Mercure\EventSubscriber\SetCookieSubscriber;
-use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\CallableTokenProvider;
