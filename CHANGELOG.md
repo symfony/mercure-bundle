@@ -11,6 +11,8 @@ CHANGELOG
 * **BC break:** Remove `MercureDataCollector::getPublishers()` (deprecated since 0.3 in favor of `getHubs()`)
 * Pick between `Hub` and `FrankenPhpHub` at runtime, through a factory, instead of guessing at container build time: an empty `url` (an unset or empty `MERCURE_URL`, which is all Docker Compose can express) now reliably selects FrankenPHP's built-in Mercure hub, which is also autowirable through `HubInterface` like any other hub. `url` and `public_url` both default to `null` unconditionally
 * Add the `publisher` and `subscriber` per-hub options, an alternative to `jwt` to sign publisher and subscriber tokens with different keys
+* Fix a `default_hub` naming an undefined hub failing with a `TypeError` instead of a configuration error
+* Fix the profiler's `TraceableHub` keeping the messages of previous requests in long-running processes (e.g. FrankenPHP's worker mode)
 
 0.5.0
 -----
