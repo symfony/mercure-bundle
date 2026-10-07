@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
+use Symfony\Component\Config\Definition\Builder\EnumNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Mercure\FrankenPhpHub;
@@ -97,14 +98,10 @@ final class Configuration implements ConfigurationInterface
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
         ->scalarNode('http_client')->info('The ID of the HTTP client service to publish to this hub with, e.g. a scoped client with a short timeout. Defaults to "http_client".')->end()
-        ->enumNode('protocol_version')
-            ->values(array_column(ProtocolVersion::cases(), 'value'))
-            ->defaultValue(ProtocolVersion::Legacy->value) // flip to V1 in a future release once Mercure hub 1.0 is tagged stable; nothing else here should need to change
-            ->info('The Mercure protocol version spoken by this hub: "0.x" (default) or "1.0". Affects the default cookie name, the JWT claim shape built by "jwt.secret", and how the mercure() Twig function interprets matcher-typed topics.')
-        ->end()
+        ->append(self::protocolVersionNode())
         ->scalarNode('cookie_name')
             ->defaultNull()
-            ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" ("mercureAuthorization" for "0.x", "__Secure-mercure_access_token" for "1.0") when not set.')
+            ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
         ->end()
                             ->end()
                             ->validate()
@@ -128,7 +125,7 @@ final class Configuration implements ConfigurationInterface
         ->thenInvalid('"jwt.secret" and "jwt.jwks_uri" cannot be used together.')
                             ->end()
                             ->validate()
-        ->ifTrue(static function ($v) { return isset($v['jwt']['jwks_uri']) && ProtocolVersion::V1->value !== $v['protocol_version']; })
+        ->ifTrue(static function ($v) { return isset($v['jwt']['jwks_uri']) && ProtocolVersion::V1 !== $v['protocol_version']; })
         ->thenInvalid('"jwt.jwks_uri" requires "protocol_version: 1.0", as it is only supported by WebTokenFactory.')
                             ->end()
                         ->end()
@@ -141,5 +138,26 @@ final class Configuration implements ConfigurationInterface
         ;
 
         return $treeBuilder;
+    }
+
+    private static function protocolVersionNode(): EnumNodeDefinition
+    {
+        $node = new EnumNodeDefinition('protocol_version');
+
+        // enumFqcn() requires symfony/config 7.3
+        if (method_exists($node, 'enumFqcn')) {
+            $node->enumFqcn(ProtocolVersion::class);
+        } else {
+            $node
+                ->values(ProtocolVersion::cases())
+                ->beforeNormalization()
+                    ->ifString()
+                    ->then(static fn (string $v): ProtocolVersion|string => ProtocolVersion::tryFrom($v) ?? $v)
+                ->end();
+        }
+
+        return $node
+            ->defaultValue(ProtocolVersion::V1)
+            ->info('The Mercure protocol version spoken by this hub: "1.0" (default) or "0.x". Affects the default cookie name, the JWT claim shape built by "jwt.secret", and how the mercure() Twig function interprets matcher-typed topics.');
     }
 }
