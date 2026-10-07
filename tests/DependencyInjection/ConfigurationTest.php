@@ -19,7 +19,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Mercure\ProtocolVersion;
 
-class ConfigurationTest extends TestCase
+final class ConfigurationTest extends TestCase
 {
     private function process(array $config): array
     {

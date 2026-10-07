@@ -20,7 +20,7 @@ use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\ProtocolVersion;
 
-class HubFactoryTest extends TestCase
+final class HubFactoryTest extends TestCase
 {
     public function testUrlSelectsARemoteHub()
     {

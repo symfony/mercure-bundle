@@ -21,16 +21,11 @@ use Symfony\Component\Mercure\Debug\TraceableHub;
 final class MercureDataCollector extends DataCollector
 {
     /**
-     * @var iterable<TraceableHub>
-     */
-    private $hubs;
-
-    /**
      * @param iterable<TraceableHub> $hubs
      */
-    public function __construct(iterable $hubs)
-    {
-        $this->hubs = $hubs;
+    public function __construct(
+        private readonly iterable $hubs,
+    ) {
     }
 
     public function collect(Request $request, Response $response, ?\Throwable $exception = null): void
