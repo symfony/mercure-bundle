@@ -56,7 +56,7 @@ class MercureExtensionTest extends TestCase
         $this->assertTrue($container->hasDefinition('mercure.hub.default.jwt.provider'));
         $this->assertSame($config['mercure']['hubs']['default']['url'], $container->getDefinition('mercure.hub.default')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['default']['jwt'], $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(6));
+        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(6));
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $default', $container->getAliases());
@@ -93,6 +93,7 @@ class MercureExtensionTest extends TestCase
                             'publish' => ['*'],
                             'subscribe' => 'https://example.com/book/1.jsonld',
                         ],
+                        'protocol_version' => '0.x',
                     ],
                     'managed2' => [
                         'url' => 'https://demo.mercure.rocks/managed',
@@ -103,6 +104,7 @@ class MercureExtensionTest extends TestCase
                             'publish' => ['*'],
                             'subscribe' => 'https://example.com/book/1.jsonld',
                         ],
+                        'protocol_version' => '0.x',
                     ],
                 ],
             ],
@@ -179,7 +181,7 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs']['demo']['url'], $container->getDefinition('mercure.hub.demo')->getArgument(0));
         $this->assertSame($config['mercure']['hubs']['demo']['public_url'], $container->getDefinition('mercure.hub.demo')->getArgument(3));
         $this->assertSame($config['mercure']['hubs']['demo']['jwt']['value'], $container->getDefinition('mercure.hub.demo.jwt.provider')->getArgument(0));
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.demo')->getArgument(6));
+        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.demo')->getArgument(6));
         $this->assertNull($container->getDefinition('mercure.hub.demo')->getArgument(5));
 
         $this->assertArrayHasKey('Symfony\Component\Mercure\HubInterface $demo', $container->getAliases());
@@ -234,8 +236,8 @@ class MercureExtensionTest extends TestCase
         $this->assertSame($config['mercure']['hubs'][0]['url'], $registry->getHub()->getUrl());
         $this->assertSame($config['mercure']['hubs'][0]['url'], $registry->getHub('default')->getUrl());
         $this->assertSame($config['mercure']['hubs'][1]['url'], $registry->getHub('managed')->getUrl());
-        $this->assertSame(ProtocolVersion::Legacy, $registry->getHub()->getProtocolVersion());
-        $this->assertSame('mercureAuthorization', $registry->getHub()->getCookieName());
+        $this->assertSame(ProtocolVersion::V1, $registry->getHub()->getProtocolVersion());
+        $this->assertSame('__Secure-mercure_access_token', $registry->getHub()->getCookieName());
     }
 
     public function testProfilerRegistersTraceableHubOnly()
@@ -282,7 +284,7 @@ class MercureExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('mercure.hub.default'));
         $this->assertSame(FrankenPhpHub::class, $container->getDefinition('mercure.hub.default')->getClass());
-        $this->assertSame(ProtocolVersion::Legacy, $container->getDefinition('mercure.hub.default')->getArgument(3));
+        $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(3));
         $this->assertNull($container->getDefinition('mercure.hub.default')->getArgument(2));
     }
 
@@ -361,6 +363,7 @@ class MercureExtensionTest extends TestCase
                         'jwt' => [
                             'secret' => '!ChangeMe!',
                         ],
+                        'protocol_version' => '0.x',
                     ],
                 ],
             ],
@@ -438,6 +441,7 @@ class MercureExtensionTest extends TestCase
                         'jwt' => [
                             'secret' => '!ChangeMe!',
                         ],
+                        'protocol_version' => '0.x',
                     ],
                 ],
             ],
@@ -462,6 +466,7 @@ class MercureExtensionTest extends TestCase
                             'secret' => '!ChangeMe!',
                             'claims' => ['iss' => 'https://example.com'],
                         ],
+                        'protocol_version' => '0.x',
                     ],
                 ],
             ],
@@ -516,7 +521,7 @@ class MercureExtensionTest extends TestCase
                 'hubs' => [
                     'default' => [
                         'url' => 'https://demo.mercure.rocks/hub',
-                        'jwt' => ['secret' => '!ChangeMe!'],
+                        'jwt' => ['secret' => '!ChangeMe!', 'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com']],
                     ],
                 ],
             ],

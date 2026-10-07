@@ -4,6 +4,7 @@ CHANGELOG
 0.6.0
 -----
 
+* Default `protocol_version` to `1.0` now that Mercure hub 1.0 is stable; set `protocol_version: 0.x` to keep talking to a 0.x hub. Hubs relying on the default now use the `__Secure-mercure_access_token` cookie name, and `jwt.secret` hubs must define the `iss`, `sub` and `client_id` claims in `jwt.claims` or the container fails to compile
 * Add the `http_client` per-hub option, to publish through a dedicated HTTP client service (e.g. a scoped client with a short timeout)
 * **BC break:** Stop registering the legacy `Publisher` / `PublisherInterface` / `TraceablePublisher` services and aliases, and the `StaticJwtProvider` service (`mercure.hub.*.jwt_provider`). Apps must use `Hub` / `HubInterface` / `TraceableHub` and `StaticTokenProvider` (`mercure.hub.*.jwt.provider`) instead. This removes the `symfony/mercure` 0.5 deprecations that were triggered on every container boot even when the Hub API was used exclusively (#121)
 * **BC break:** Remove `MercureDataCollector::getPublishers()` (deprecated since 0.3 in favor of `getHubs()`)

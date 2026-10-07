@@ -25,7 +25,7 @@ class ConfigurationTest extends TestCase
         return (new Processor())->processConfiguration(new Configuration(), [$config]);
     }
 
-    public function testProtocolVersionDefaultsToLegacyValue()
+    public function testProtocolVersionDefaultsToV1Value()
     {
         $config = $this->process([
             'hubs' => [
@@ -36,7 +36,7 @@ class ConfigurationTest extends TestCase
             ],
         ]);
 
-        $this->assertSame('0.x', $config['hubs']['default']['protocol_version']);
+        $this->assertSame('1.0', $config['hubs']['default']['protocol_version']);
         $this->assertNull($config['hubs']['default']['cookie_name']);
     }
 
@@ -126,6 +126,7 @@ class ConfigurationTest extends TestCase
                 'default' => [
                     'url' => 'https://demo.mercure.rocks/hub',
                     'jwt' => ['jwks_uri' => 'https://example.com/jwks.json'],
+                    'protocol_version' => '0.x',
                 ],
             ],
         ]);
