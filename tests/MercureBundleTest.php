@@ -24,7 +24,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\Authorization;
 
-class MercureBundleTest extends TestCase
+final class MercureBundleTest extends TestCase
 {
     public function testBuildSetsAuthorizationCookieLifetime()
     {
@@ -48,13 +48,11 @@ class MercureBundleTest extends TestCase
         (new MercureBundle())->build($container);
 
         // prevent unused services removal/inlining and missing optional services errors
-        $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), static function (CompilerPassInterface $pass) {
-            return !(
-                $pass instanceof RemoveUnusedDefinitionsPass
-                || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
-                || $pass instanceof InlineServiceDefinitionsPass
-            );
-        }));
+        $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), static fn (CompilerPassInterface $pass): bool => !(
+            $pass instanceof RemoveUnusedDefinitionsPass
+            || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
+            || $pass instanceof InlineServiceDefinitionsPass
+        )));
 
         $container->compile();
 
@@ -73,13 +71,11 @@ class MercureBundleTest extends TestCase
         (new MercureBundle())->build($container);
 
         // prevent unused services removal/inlining and missing optional services errors
-        $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), static function (CompilerPassInterface $pass) {
-            return !(
-                $pass instanceof RemoveUnusedDefinitionsPass
-                || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
-                || $pass instanceof InlineServiceDefinitionsPass
-            );
-        }));
+        $container->getCompilerPassConfig()->setRemovingPasses(array_filter($container->getCompilerPassConfig()->getRemovingPasses(), static fn (CompilerPassInterface $pass): bool => !(
+            $pass instanceof RemoveUnusedDefinitionsPass
+            || $pass instanceof CheckExceptionOnInvalidReferenceBehaviorPass
+            || $pass instanceof InlineServiceDefinitionsPass
+        )));
 
         $container->compile();
 

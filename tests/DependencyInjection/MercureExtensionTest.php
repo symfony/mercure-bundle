@@ -34,7 +34,7 @@ use Symfony\Component\Mercure\RemoteHubInterface;
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
  */
-class MercureExtensionTest extends TestCase
+final class MercureExtensionTest extends TestCase
 {
     public function testExtensionMinimum()
     {
