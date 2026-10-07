@@ -19,3 +19,9 @@ parameters:
 			reportUnmatched: false
 			paths:
 				- src/DependencyInjection/MercureExtension.php
+		# enumFqcn() only exists since symfony/config 7.3
+		-
+			message: "#^Call to function method_exists\\(\\) with .*EnumNodeDefinition.* and 'enumFqcn' will always evaluate to (true|false)\\.$#"
+			reportUnmatched: false
+			paths:
+				- src/DependencyInjection/Configuration.php

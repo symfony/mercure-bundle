@@ -17,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\Configuration;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 class ConfigurationTest extends TestCase
 {
@@ -36,7 +37,7 @@ class ConfigurationTest extends TestCase
             ],
         ]);
 
-        $this->assertSame('1.0', $config['hubs']['default']['protocol_version']);
+        $this->assertSame(ProtocolVersion::V1, $config['hubs']['default']['protocol_version']);
         $this->assertNull($config['hubs']['default']['cookie_name']);
     }
 
@@ -52,7 +53,22 @@ class ConfigurationTest extends TestCase
             ],
         ]);
 
-        $this->assertSame('1.0', $config['hubs']['default']['protocol_version']);
+        $this->assertSame(ProtocolVersion::V1, $config['hubs']['default']['protocol_version']);
+    }
+
+    public function testProtocolVersionAcceptsEnumCase()
+    {
+        $config = $this->process([
+            'hubs' => [
+                'default' => [
+                    'url' => 'https://demo.mercure.rocks/hub',
+                    'jwt' => 'foo.bar.baz',
+                    'protocol_version' => ProtocolVersion::Legacy,
+                ],
+            ],
+        ]);
+
+        $this->assertSame(ProtocolVersion::Legacy, $config['hubs']['default']['protocol_version']);
     }
 
     public function testProtocolVersionRejectsInvalidValue()
