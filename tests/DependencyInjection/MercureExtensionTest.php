@@ -353,6 +353,37 @@ class MercureExtensionTest extends TestCase
         $this->assertSame(ContainerInterface::IGNORE_ON_INVALID_REFERENCE, $httpClient->getInvalidBehavior());
     }
 
+    public function testDebugModeDefaultsToPrefixLessCookieName()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                    'custom' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        'cookie_name' => '__Secure-custom',
+                    ],
+                    'legacy' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        'protocol_version' => '0.x',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => true]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertSame('mercure_access_token', $container->getDefinition('mercure.hub.default')->getArgument(5));
+        $this->assertSame('__Secure-custom', $container->getDefinition('mercure.hub.custom')->getArgument(5));
+        $this->assertNull($container->getDefinition('mercure.hub.legacy')->getArgument(5));
+    }
+
     public function testLegacyHubUsesLcobucciFactoryWithLegacyProtocolVersion()
     {
         $config = [

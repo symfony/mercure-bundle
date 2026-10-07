@@ -75,11 +75,13 @@ final class MercureExtension extends Extension
         $traceableHubs = [];
         $hubs = [];
         $defaultHubName = null;
-        $enableProfiler = ($config['enable_profiler'] ?? $container->getParameter('kernel.debug')) && class_exists(Stopwatch::class);
+        $debug = (bool) $container->getParameter('kernel.debug');
+        $enableProfiler = ($config['enable_profiler'] ?? $debug) && class_exists(Stopwatch::class);
         foreach ($config['hubs'] as $name => $hub) {
             $builtinHub = !isset($hub['url']);
             $protocolVersion = ProtocolVersion::from($hub['protocol_version']);
-            $cookieName = $hub['cookie_name'];
+            // browsers drop "__Secure-" cookies over plain HTTP; this is also the hub's "playground" default
+            $cookieName = $hub['cookie_name'] ?? ($debug && ProtocolVersion::V1 === $protocolVersion ? 'mercure_access_token' : null);
 
             $tokenFactory = null;
             $tokenProvider = null;

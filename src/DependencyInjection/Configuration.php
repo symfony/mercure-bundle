@@ -104,7 +104,7 @@ final class Configuration implements ConfigurationInterface
         ->end()
         ->scalarNode('cookie_name')
             ->defaultNull()
-            ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" ("__Secure-mercure_access_token" for "1.0", "mercureAuthorization" for "0.x") when not set.')
+            ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
         ->end()
                             ->end()
                             ->validate()
