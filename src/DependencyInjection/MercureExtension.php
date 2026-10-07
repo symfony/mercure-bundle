@@ -86,49 +86,15 @@ final class MercureExtension extends Extension
 
             $tokenFactory = null;
             $tokenProvider = null;
-
-            // Legacy "jwt" node (kept for BC, now also carrying Mercure protocol 1.0 options) —
-            // produces $tokenProvider (and $tokenFactory for the secret/jwks paths).
             if (isset($hub['jwt'])) {
                 if (isset($hub['jwt']['value'])) {
-                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
-
-                    $container->register($tokenProvider, StaticTokenProvider::class)
-                        ->addArgument($hub['jwt']['value'])
-                        ->addTag('mercure.jwt.provider');
+                    $tokenProvider = $this->registerStaticTokenProvider($container, $name, $hub['jwt']['value']);
                 } elseif (isset($hub['jwt']['provider'])) {
                     $tokenProvider = $hub['jwt']['provider'];
                 } else {
-                    // 'factory', or 'secret'/'jwks_uri', must be set.
-                    $factoryId = \sprintf('mercure.hub.%s.jwt.factory', $name);
-                    $rawTokenFactory = $hub['jwt']['factory'] ?? $this->registerTokenFactory($container, $name, $factoryId, $hub['jwt'], $protocolVersion, 'jwt');
-
-                    // "aud" defaults to the hub's own public identifier and, together with any explicit
-                    // "jwt.claims", is baked into the factory itself (not just the provider below), so
-                    // Authorization and the Twig mercure() function — which call HubInterface::getFactory()
-                    // directly — get these claims too.
-                    $tokenFactory = $this->applyDefaultClaims($container, $factoryId, $rawTokenFactory, $hub['jwt'], $protocolVersion, $hub);
-
-                    $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
-                        ->setFactory(['Closure', 'fromCallable'])
-                        ->addArgument([new Reference($tokenFactory), 'create']);
-                    $tokenFactory = '.lazy.'.$tokenFactory;
-
-                    $grants = $this->grants($hub['jwt']['publish'] ?? [], $hub['jwt']['subscribe'] ?? []);
-
-                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
-                    $container->register($tokenProvider, FactoryTokenProvider::class)
-                        ->addArgument(new Reference($tokenFactory))
-                        ->addArgument($grants)
-                        ->addTag('mercure.jwt.factory');
-
-                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
-                    $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
-                    $container->registerAliasForArgument(
-                        $tokenFactory,
-                        TokenFactoryInterface::class,
-                        "{$name}TokenFactory"
-                    );
+                    // 'factory', or 'secret', must be set.
+                    $tokenFactory = $this->registerLazyTokenFactory($container, $name, \sprintf('mercure.hub.%s.jwt.factory', $name), $hub['jwt'], 'jwt', $protocolVersion, $hub);
+                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $tokenFactory, $hub['jwt']['publish'] ?? [], $hub['jwt']['subscribe'] ?? []);
                 }
             } elseif (isset($hub['jwt_provider'])) {
                 $jwtProvider = $hub['jwt_provider'];
@@ -137,80 +103,29 @@ final class MercureExtension extends Extension
                 $container->register($tokenProvider, CallableTokenProvider::class)
                     ->addArgument(new Reference($jwtProvider))
                     ->addTag('mercure.jwt.provider');
-            } elseif (isset($hub['publisher'])) {
-                // Split publisher/subscriber JWT configuration — produces $tokenProvider (from the
-                // publisher config) and, when the subscriber can sign, $tokenFactory.
-                $pub = $hub['publisher'];
+            } else {
+                $publisher = $hub['publisher'] ?? null;
+                $subscriber = $hub['subscriber'] ?? null;
+                $sharedFactory = isset($publisher, $subscriber) && !isset($publisher['factory']) && !isset($subscriber['factory']) && self::signingOptions($publisher) === self::signingOptions($subscriber);
 
-                if (isset($pub['value'])) {
-                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
-
-                    $container->register($tokenProvider, StaticTokenProvider::class)
-                        ->addArgument($pub['value'])
-                        ->addTag('mercure.jwt.provider');
-                } elseif (isset($pub['provider'])) {
-                    $tokenProvider = $pub['provider'];
-                } else {
-                    // "factory", "secret", or "jwks_uri" — build a TokenFactoryInterface for the publisher,
-                    // reused for the subscriber when both sides sign identically.
-                    $sub = $hub['subscriber'] ?? [];
-                    $sharedSecret = isset($pub['secret'], $sub['secret'])
-                        && !isset($pub['jwks_uri']) && !isset($sub['jwks_uri'])
-                        && $pub['secret'] === $sub['secret']
-                        && ($pub['algorithm'] ?? null) === ($sub['algorithm'] ?? null)
-                        && ($pub['passphrase'] ?? '') === ($sub['passphrase'] ?? '')
-                        && ($pub['claims'] ?? []) === ($sub['claims'] ?? []);
-
-                    // Shared signing collapses onto the canonical "mercure.hub.%s.jwt.factory" id, so a hub
-                    // whose publisher and subscriber sign identically mints a single factory — exactly as
-                    // the legacy "jwt.secret" path does.
-                    $publisherFactoryId = $sharedSecret
-                        ? \sprintf('mercure.hub.%s.jwt.factory', $name)
-                        : \sprintf('mercure.hub.%s.publisher.jwt.factory', $name);
-
-                    $rawPublisherFactory = $pub['factory'] ?? $this->registerTokenFactory($container, $name, $publisherFactoryId, $pub, $protocolVersion, 'publisher');
-                    $publisherFactory = $this->applyDefaultClaims($container, $publisherFactoryId, $rawPublisherFactory, $pub, $protocolVersion, $hub);
-
-                    $lazyPublisherFactory = '.lazy.'.$publisherFactory;
-                    $container->register($lazyPublisherFactory, TokenFactoryInterface::class)
-                        ->setFactory(['Closure', 'fromCallable'])
-                        ->addArgument([new Reference($publisherFactory), 'create']);
-
-                    $grants = $this->grants($pub['topics'] ?? [], $sub['topics'] ?? []);
-
-                    $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
-                    $container->register($tokenProvider, FactoryTokenProvider::class)
-                        ->addArgument(new Reference($lazyPublisherFactory))
-                        ->addArgument($grants)
-                        ->addTag('mercure.jwt.factory');
-
-                    // Subscriber block — produces $tokenFactory
-                    if (isset($sub['factory'])) {
-                        $tokenFactory = $sub['factory'];
-                    } elseif ($sharedSecret) {
-                        // Reuse the publisher factory.
-                        $tokenFactory = $lazyPublisherFactory;
-                    } elseif (isset($sub['secret']) || isset($sub['jwks_uri'])) {
-                        $subscriberFactoryId = \sprintf('mercure.hub.%s.subscriber.jwt.factory', $name);
-                        $rawSubscriberFactory = $this->registerTokenFactory($container, $name, $subscriberFactoryId, $sub, $protocolVersion, 'subscriber');
-                        $subscriberFactory = $this->applyDefaultClaims($container, $subscriberFactoryId, $rawSubscriberFactory, $sub, $protocolVersion, $hub);
-
-                        $tokenFactory = '.lazy.'.$subscriberFactory;
-                        $container->register($tokenFactory, TokenFactoryInterface::class)
-                            ->setFactory(['Closure', 'fromCallable'])
-                            ->addArgument([new Reference($subscriberFactory), 'create']);
-                    }
-
-                    if (null !== $tokenFactory) {
-                        $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
-                        $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
-                        $container->registerAliasForArgument(
-                            $tokenFactory,
-                            TokenFactoryInterface::class,
-                            "{$name}TokenFactory"
-                        );
-                    }
+                if (null !== $subscriber) {
+                    $tokenFactory = $this->registerLazyTokenFactory($container, $name, \sprintf($sharedFactory ? 'mercure.hub.%s.jwt.factory' : 'mercure.hub.%s.subscriber.jwt.factory', $name), $subscriber, 'subscriber', $protocolVersion, $hub);
                 }
+
+                if (isset($publisher['value'])) {
+                    $tokenProvider = $this->registerStaticTokenProvider($container, $name, $publisher['value']);
+                } elseif (isset($publisher['provider'])) {
+                    $tokenProvider = $publisher['provider'];
+                } elseif (null !== $publisher) {
+                    $publisherFactory = $sharedFactory ? $tokenFactory : $this->registerLazyTokenFactory($container, $name, \sprintf('mercure.hub.%s.publisher.jwt.factory', $name), $publisher, 'publisher', $protocolVersion, $hub);
+                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $publisherFactory, $publisher['topics'] ?? [], []);
+                }
+            }
+
+            if (null !== $tokenFactory) {
+                $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, $name);
+                $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}Factory");
+                $container->registerAliasForArgument($tokenFactory, TokenFactoryInterface::class, "{$name}TokenFactory");
             }
 
             if (null !== $tokenProvider) {
@@ -330,12 +245,81 @@ final class MercureExtension extends Extension
         }
     }
 
+    private function registerStaticTokenProvider(ContainerBuilder $container, string $name, string $token): string
+    {
+        $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
+        $container->register($tokenProvider, StaticTokenProvider::class)
+            ->addArgument($token)
+            ->addTag('mercure.jwt.provider');
+
+        return $tokenProvider;
+    }
+
     /**
-     * Registers, at $factoryId, the token factory built from a signing config ("jwt", "publisher" or
-     * "subscriber", named by $configPath for error messages) and returns its service id.
+     * @param string[] $publish
+     * @param string[] $subscribe
+     */
+    private function registerFactoryTokenProvider(ContainerBuilder $container, string $name, string $tokenFactory, array $publish, array $subscribe): string
+    {
+        // Always grant both actions, even over an empty topic list: this preserves the
+        // legacy claim's exact historical shape (a "mercure" object with "publish"/"subscribe"
+        // keys, always present). Under protocol 1.0 an empty-topics grant is inert either way.
+        // Inline Definitions, not live Grant instances: the compiled container can only
+        // dump an argument it knows how to (re)construct, not an already-built object.
+        $grants = [
+            new Definition(Grant::class, [[Grant::ACTION_PUBLISH], $publish]),
+            new Definition(Grant::class, [[Grant::ACTION_SUBSCRIBE], $subscribe]),
+        ];
+
+        $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
+        $container->register($tokenProvider, FactoryTokenProvider::class)
+            ->addArgument(new Reference($tokenFactory))
+            ->addArgument($grants)
+            ->addTag('mercure.jwt.factory');
+
+        return $tokenProvider;
+    }
+
+    /**
+     * Registers the token factory configured under $configPath ("jwt", "publisher" or "subscriber"), and returns the ID of its lazy wrapper.
      *
-     * @param array<string, mixed> $jwt the signing sub-config: one of "secret"/"jwks_uri" plus the
-     *                                  optional "algorithm"/"passphrase"/"key_id"/"claims" siblings
+     * @param array<string, mixed> $jwt
+     * @param array<string, mixed> $hub
+     */
+    private function registerLazyTokenFactory(ContainerBuilder $container, string $name, string $factoryId, array $jwt, string $configPath, ProtocolVersion $protocolVersion, array $hub): string
+    {
+        $tokenFactory = $jwt['factory'] ?? $this->registerTokenFactory($container, $name, $factoryId, $jwt, $protocolVersion, $configPath);
+
+        // "aud" defaults to the hub's own public identifier when not explicitly set;
+        // required (along with "iss"/"sub"/"client_id") by RFC 9068 access tokens under protocol 1.0.
+        // Baked into the factory itself, not just the token provider, so Authorization and the Twig
+        // mercure() function, which call HubInterface::getFactory() directly, get these claims too.
+        $defaultClaims = $jwt['claims'] ?? [];
+        if (ProtocolVersion::V1 === $protocolVersion && null !== ($aud = $hub['public_url'] ?? $hub['url'] ?? null)) {
+            $defaultClaims += ['aud' => $aud];
+        }
+
+        // No wrapping when there is nothing to merge: a 0.x hub without claims must
+        // keep minting byte-identical legacy tokens (no "aud"), and a user-supplied
+        // factory must pass through untouched.
+        if ([] !== $defaultClaims) {
+            $container->register("$factoryId.default_claims", DefaultClaimsTokenFactory::class)
+                ->addArgument(new Reference($tokenFactory))
+                ->addArgument($defaultClaims);
+            $tokenFactory = "$factoryId.default_claims";
+        }
+
+        $container->register('.lazy.'.$tokenFactory, TokenFactoryInterface::class)
+            ->setFactory(['Closure', 'fromCallable'])
+            ->addArgument([new Reference($tokenFactory), 'create']);
+
+        return '.lazy.'.$tokenFactory;
+    }
+
+    /**
+     * Registers the token factory built from "secret" or "jwks_uri" at $factoryId.
+     *
+     * @param array<string, mixed> $jwt
      */
     private function registerTokenFactory(ContainerBuilder $container, string $name, string $factoryId, array $jwt, ProtocolVersion $protocolVersion, string $configPath): string
     {
@@ -383,51 +367,12 @@ final class MercureExtension extends Extension
     }
 
     /**
-     * Wraps $rawFactory in a DefaultClaimsTokenFactory when the signing config carries "claims" (or a
-     * protocol 1.0 hub has an "aud" to default), so those claims are baked into the factory itself and
-     * reach HubInterface::getFactory() callers (Authorization, the Twig mercure() function). Returns the
-     * wrapper's id, or $rawFactory untouched when there is nothing to merge — a 0.x hub without claims
-     * keeps minting byte-identical legacy tokens, and a user-supplied factory passes through unchanged.
+     * @param array<string, mixed> $jwt
      *
-     * @param array<string, mixed> $jwt the signing sub-config
-     * @param array<string, mixed> $hub the whole hub config, for the "aud" default ("public_url"/"url")
+     * @return array<string, mixed>
      */
-    private function applyDefaultClaims(ContainerBuilder $container, string $factoryBaseId, string $rawFactory, array $jwt, ProtocolVersion $protocolVersion, array $hub): string
+    private static function signingOptions(array $jwt): array
     {
-        $defaultClaims = $jwt['claims'] ?? [];
-        if (ProtocolVersion::V1 === $protocolVersion && null !== ($aud = $hub['public_url'] ?? $hub['url'] ?? null)) {
-            $defaultClaims += ['aud' => $aud];
-        }
-
-        if ([] === $defaultClaims) {
-            return $rawFactory;
-        }
-
-        $wrappedFactory = $factoryBaseId.'.default_claims';
-        $container->register($wrappedFactory, DefaultClaimsTokenFactory::class)
-            ->addArgument(new Reference($rawFactory))
-            ->addArgument($defaultClaims);
-
-        return $wrappedFactory;
-    }
-
-    /**
-     * Builds the publish/subscribe grants for a FactoryTokenProvider. Both actions are always granted,
-     * even over an empty topic list, to preserve the legacy claim's exact historical shape (a "mercure"
-     * object with "publish"/"subscribe" keys, always present); under protocol 1.0 an empty-topics grant
-     * is inert. Inline Definitions, not live Grant instances: the compiled container can only dump an
-     * argument it knows how to (re)construct, not an already-built object.
-     *
-     * @param array<int, string>|array<string, string[]> $publishTopics
-     * @param array<int, string>|array<string, string[]> $subscribeTopics
-     *
-     * @return Definition[]
-     */
-    private function grants(array $publishTopics, array $subscribeTopics): array
-    {
-        return [
-            new Definition(Grant::class, [[Grant::ACTION_PUBLISH], $publishTopics]),
-            new Definition(Grant::class, [[Grant::ACTION_SUBSCRIBE], $subscribeTopics]),
-        ];
+        return array_intersect_key($jwt, array_flip(['secret', 'passphrase', 'algorithm', 'jwks_uri', 'key_id', 'claims']));
     }
 }

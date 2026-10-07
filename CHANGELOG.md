@@ -10,6 +10,7 @@ CHANGELOG
 * **BC break:** Stop registering the legacy `Publisher` / `PublisherInterface` / `TraceablePublisher` services and aliases, and the `StaticJwtProvider` service (`mercure.hub.*.jwt_provider`). Apps must use `Hub` / `HubInterface` / `TraceableHub` and `StaticTokenProvider` (`mercure.hub.*.jwt.provider`) instead. This removes the `symfony/mercure` 0.5 deprecations that were triggered on every container boot even when the Hub API was used exclusively (#121)
 * **BC break:** Remove `MercureDataCollector::getPublishers()` (deprecated since 0.3 in favor of `getHubs()`)
 * Pick between `Hub` and `FrankenPhpHub` at runtime, through a factory, instead of guessing at container build time: an empty `url` (an unset or empty `MERCURE_URL`, which is all Docker Compose can express) now reliably selects FrankenPHP's built-in Mercure hub, which is also autowirable through `HubInterface` like any other hub. `url` and `public_url` both default to `null` unconditionally
+* Add the `publisher` and `subscriber` per-hub options, an alternative to `jwt` to sign publisher and subscriber tokens with different keys
 
 0.5.0
 -----
