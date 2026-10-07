@@ -96,6 +96,7 @@ final class Configuration implements ConfigurationInterface
             ->setDeprecated('symfony/mercure-bundle', '0.3', 'The child node "%node%" at path "%path%" is deprecated, use "jwt.provider" instead.')
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
+        ->scalarNode('http_client')->info('The ID of the HTTP client service to publish to this hub with, e.g. a scoped client with a short timeout. Defaults to "http_client".')->end()
         ->enumNode('protocol_version')
             ->values(array_column(ProtocolVersion::cases(), 'value'))
             ->defaultValue(ProtocolVersion::Legacy->value) // flip to V1 in a future release once Mercure hub 1.0 is tagged stable; nothing else here should need to change

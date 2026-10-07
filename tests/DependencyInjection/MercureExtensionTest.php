@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Mercure\FrankenPhpHub;
@@ -287,6 +288,50 @@ class MercureExtensionTest extends TestCase
 
         $this->assertSame(ProtocolVersion::V1, $container->getDefinition('mercure.hub.default')->getArgument(6));
         $this->assertSame('custom_cookie', $container->getDefinition('mercure.hub.default')->getArgument(5));
+    }
+
+    public function testExtensionWithCustomHttpClient()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                        'http_client' => 'app.mercure_http_client',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        foreach ([$container->getDefinition('mercure.hub.default')->getArgument(4), $container->getDefinition('mercure.hub.default.publisher')->getArgument(2)] as $httpClient) {
+            $this->assertSame('app.mercure_http_client', (string) $httpClient);
+            $this->assertSame(ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE, $httpClient->getInvalidBehavior());
+        }
+    }
+
+    public function testExtensionDefaultsToGlobalHttpClient()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $httpClient = $container->getDefinition('mercure.hub.default')->getArgument(4);
+        $this->assertSame('http_client', (string) $httpClient);
+        $this->assertSame(ContainerInterface::IGNORE_ON_INVALID_REFERENCE, $httpClient->getInvalidBehavior());
     }
 
     public function testLegacyHubUsesLcobucciFactoryWithLegacyProtocolVersion()
