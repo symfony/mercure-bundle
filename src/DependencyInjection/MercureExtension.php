@@ -106,7 +106,7 @@ final class MercureExtension extends Extension
             } else {
                 $publisher = $hub['publisher'] ?? null;
                 $subscriber = $hub['subscriber'] ?? null;
-                $sharedFactory = isset($publisher, $subscriber) && !isset($publisher['factory']) && !isset($subscriber['factory']) && self::signingOptions($publisher) === self::signingOptions($subscriber);
+                $sharedFactory = isset($publisher, $subscriber) && !isset($publisher['factory']) && !isset($subscriber['factory']) && $this->signingOptions($publisher) === $this->signingOptions($subscriber);
 
                 if (null !== $subscriber) {
                     $tokenFactory = $this->registerLazyTokenFactory($container, $name, \sprintf($sharedFactory ? 'mercure.hub.%s.jwt.factory' : 'mercure.hub.%s.subscriber.jwt.factory', $name), $subscriber, 'subscriber', $protocolVersion, $hub);
@@ -371,7 +371,7 @@ final class MercureExtension extends Extension
      *
      * @return array<string, mixed>
      */
-    private static function signingOptions(array $jwt): array
+    private function signingOptions(array $jwt): array
     {
         return array_intersect_key($jwt, array_flip(['secret', 'passphrase', 'algorithm', 'jwks_uri', 'key_id', 'claims']));
     }

@@ -43,16 +43,16 @@ final class Configuration implements ConfigurationInterface
                                 // decided at runtime by HubFactory, not here. See HubFactory::create().
                                 ->scalarNode('url')->defaultNull()->info("URL of the hub's publish endpoint. Leave empty to publish through FrankenPHP's built-in Mercure hub.")->example('https://demo.mercure.rocks/.well-known/mercure')->end()
                                 ->scalarNode('public_url')->defaultNull()->info("URL of the hub's public endpoint")->example('https://demo.mercure.rocks/.well-known/mercure')->end()
-        ->append(self::publisherNode())
-        ->append(self::subscriberNode())
-        ->append(self::jwtNode())
+        ->append($this->publisherNode())
+        ->append($this->subscriberNode())
+        ->append($this->jwtNode())
         ->scalarNode('jwt_provider')
             ->info('The ID of a service to call to generate the JSON Web Token.')
             ->setDeprecated('symfony/mercure-bundle', '0.3', 'The child node "%node%" at path "%path%" is deprecated, use "jwt.provider" instead.')
         ->end()
         ->scalarNode('bus')->info('Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.')->end()
         ->scalarNode('http_client')->info('The ID of the HTTP client service to publish to this hub with, e.g. a scoped client with a short timeout. Defaults to "http_client".')->end()
-        ->append(self::protocolVersionNode())
+        ->append($this->protocolVersionNode())
         ->scalarNode('cookie_name')
             ->defaultNull()
             ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
@@ -122,7 +122,7 @@ final class Configuration implements ConfigurationInterface
         return $treeBuilder;
     }
 
-    private static function publisherNode(): ArrayNodeDefinition
+    private function publisherNode(): ArrayNodeDefinition
     {
         $node = new ArrayNodeDefinition('publisher');
         $node
@@ -137,10 +137,10 @@ final class Configuration implements ConfigurationInterface
                     ->info('A list of topics to allow publishing to when using the given factory to generate the JWT.')
                 ->end();
 
-        return self::addSigningNodes($node);
+        return $this->addSigningNodes($node);
     }
 
-    private static function subscriberNode(): ArrayNodeDefinition
+    private function subscriberNode(): ArrayNodeDefinition
     {
         $node = new ArrayNodeDefinition('subscriber');
         $node
@@ -148,10 +148,10 @@ final class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('factory')->info('The ID of a service implementing TokenFactoryInterface, used to create the JSON Web Tokens.')->end();
 
-        return self::addSigningNodes($node);
+        return $this->addSigningNodes($node);
     }
 
-    private static function jwtNode(): ArrayNodeDefinition
+    private function jwtNode(): ArrayNodeDefinition
     {
         $node = new ArrayNodeDefinition('jwt');
         $node
@@ -179,10 +179,10 @@ final class Configuration implements ConfigurationInterface
                     ->info('A list of topics to allow subscribing to when using the given factory to generate the JWT.')
                 ->end();
 
-        return self::addSigningNodes($node);
+        return $this->addSigningNodes($node);
     }
 
-    private static function addSigningNodes(ArrayNodeDefinition $node): ArrayNodeDefinition
+    private function addSigningNodes(ArrayNodeDefinition $node): ArrayNodeDefinition
     {
         $node
             ->children()
@@ -202,7 +202,7 @@ final class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private static function protocolVersionNode(): EnumNodeDefinition
+    private function protocolVersionNode(): EnumNodeDefinition
     {
         $node = new EnumNodeDefinition('protocol_version');
 
