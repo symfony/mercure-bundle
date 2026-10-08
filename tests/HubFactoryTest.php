@@ -15,10 +15,12 @@ namespace Symfony\Bundle\MercureBundle\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\HubFactory;
+use Symfony\Component\Mercure\Exception\RuntimeException;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\ProtocolVersion;
+use Symfony\Component\Mercure\Update;
 
 final class HubFactoryTest extends TestCase
 {
@@ -55,16 +57,12 @@ final class HubFactoryTest extends TestCase
      *
      * @dataProvider provideEmptyUrls
      */
-    public function testAnEmptyUrlWithoutFrankenPhpThrows(?string $url)
+    public function testAnEmptyUrlSelectsTheBuiltinHub(?string $url)
     {
-        if (\function_exists('mercure_publish')) {
-            $this->markTestSkipped('FrankenPHP\'s built-in Mercure hub is available.');
-        }
+        $hub = HubFactory::create($url, null, null, 'https://example.com/.well-known/mercure', null, null, ProtocolVersion::Legacy);
 
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('the mercure_publish() function it publishes through is not available');
-
-        HubFactory::create($url, null, null, 'https://example.com/.well-known/mercure', null, null, ProtocolVersion::Legacy);
+        $this->assertInstanceOf(FrankenPhpHub::class, $hub);
+        $this->assertSame('https://example.com/.well-known/mercure', $hub->getPublicUrl());
     }
 
     public static function provideEmptyUrls(): iterable
@@ -74,31 +72,25 @@ final class HubFactoryTest extends TestCase
     }
 
     /**
-     * @dataProvider provideEmptyUrls
-     *
-     * @runInSeparateProcess
-     *
-     * @preserveGlobalState disabled
+     * Creating the built-in hub must not need FrankenPHP: HubRegistry creates every hub, also
+     * under the CLI (e.g. for the Twig extension during cache:warmup). Only publishing does.
      */
-    public function testAnEmptyUrlSelectsTheBuiltinHub(?string $url)
+    public function testTheBuiltinHubOnlyNeedsFrankenPhpToPublish()
     {
-        require __DIR__.'/Fixtures/mercure_publish.php';
+        if (\function_exists('mercure_publish')) {
+            $this->markTestSkipped('FrankenPHP\'s mercure_publish() function is available.');
+        }
 
-        $hub = HubFactory::create($url, null, null, 'https://example.com/.well-known/mercure', null, null, ProtocolVersion::Legacy);
+        $hub = HubFactory::create(null, null, null, 'https://example.com/.well-known/mercure', null, null, ProtocolVersion::Legacy);
 
-        $this->assertInstanceOf(FrankenPhpHub::class, $hub);
-        $this->assertSame('https://example.com/.well-known/mercure', $hub->getPublicUrl());
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The mercure_publish() function is not available');
+
+        $hub->publish(new Update('https://example.com/books/1', 'data'));
     }
 
-    /**
-     * @runInSeparateProcess
-     *
-     * @preserveGlobalState disabled
-     */
     public function testTheBuiltinHubWithoutAPublicUrlThrows()
     {
-        require __DIR__.'/Fixtures/mercure_publish.php';
-
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('set the "public_url" option');
 
