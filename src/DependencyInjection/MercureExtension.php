@@ -94,7 +94,7 @@ final class MercureExtension extends Extension
                 } else {
                     // 'factory', or 'secret', must be set.
                     $tokenFactory = $this->registerLazyTokenFactory($container, $name, \sprintf('mercure.hub.%s.jwt.factory', $name), $hub['jwt'], 'jwt', $protocolVersion, $hub);
-                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $tokenFactory, $hub['jwt']['publish'] ?? [], $hub['jwt']['subscribe'] ?? []);
+                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $tokenFactory, $hub['jwt']['publish'] ?? [], $hub['jwt']['subscribe'] ?? [], $this->publisherAudience($hub, $hub['jwt'], $protocolVersion));
                 }
             } elseif (isset($hub['jwt_provider'])) {
                 $jwtProvider = $hub['jwt_provider'];
@@ -118,7 +118,7 @@ final class MercureExtension extends Extension
                     $tokenProvider = $publisher['provider'];
                 } elseif (null !== $publisher) {
                     $publisherFactory = $sharedFactory ? $tokenFactory : $this->registerLazyTokenFactory($container, $name, \sprintf('mercure.hub.%s.publisher.jwt.factory', $name), $publisher, 'publisher', $protocolVersion, $hub);
-                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $publisherFactory, $publisher['topics'] ?? [], []);
+                    $tokenProvider = $this->registerFactoryTokenProvider($container, $name, $publisherFactory, $publisher['topics'] ?? [], [], $this->publisherAudience($hub, $publisher, $protocolVersion));
                 }
             }
 
@@ -262,10 +262,11 @@ final class MercureExtension extends Extension
     }
 
     /**
-     * @param string[] $publish
-     * @param string[] $subscribe
+     * @param string[]      $publish
+     * @param string[]      $subscribe
+     * @param list<?string> $audience
      */
-    private function registerFactoryTokenProvider(ContainerBuilder $container, string $name, string $tokenFactory, array $publish, array $subscribe): string
+    private function registerFactoryTokenProvider(ContainerBuilder $container, string $name, string $tokenFactory, array $publish, array $subscribe, array $audience): string
     {
         // Always grant both actions, even over an empty topic list: this preserves the
         // legacy claim's exact historical shape (a "mercure" object with "publish"/"subscribe"
@@ -278,12 +279,32 @@ final class MercureExtension extends Extension
         ];
 
         $tokenProvider = \sprintf('mercure.hub.%s.jwt.provider', $name);
-        $container->register($tokenProvider, FactoryTokenProvider::class)
+        $definition = $container->register($tokenProvider, FactoryTokenProvider::class)
             ->addArgument(new Reference($tokenFactory))
             ->addArgument($grants)
             ->addTag('mercure.jwt.factory');
+        if ([] !== $audience) {
+            $definition
+                ->setFactory([HubFactory::class, 'createPublisherTokenProvider'])
+                ->addArgument($audience);
+        }
 
         return $tokenProvider;
+    }
+
+    /**
+     * @param array<string, mixed> $hub
+     * @param array<string, mixed> $jwt
+     *
+     * @return list<?string>
+     */
+    private function publisherAudience(array $hub, array $jwt, ProtocolVersion $protocolVersion): array
+    {
+        if (ProtocolVersion::V1 !== $protocolVersion || isset($jwt['claims']['aud'])) {
+            return [];
+        }
+
+        return array_values(array_filter([$hub['url'] ?? null, $hub['public_url'] ?? null]));
     }
 
     /**

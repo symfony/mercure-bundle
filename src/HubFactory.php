@@ -16,15 +16,17 @@ namespace Symfony\Bundle\MercureBundle;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Picks the hub implementation at runtime, once "url" is resolved.
+ * Builds the hub services that depend on "url" and "public_url" at runtime, once they are resolved.
  *
- * The choice cannot be made while the container is built: "url" usually comes from an
+ * This cannot be done while the container is built: "url" usually comes from an
  * environment variable, which is still an unresolved placeholder at that point, and
  * FrankenPHP only defines mercure_publish() when serving a request, not under the CLI
  * running cache:clear.
@@ -63,5 +65,23 @@ final class HubFactory
         }
 
         return new FrankenPhpHub($publicUrl, $tokenFactory, $cookieName, $protocolVersion);
+    }
+
+    /**
+     * The publisher token is sent to "url", while a hub pinning its resource identifier
+     * to "public_url" expects that one; it never reaches browsers, so it can carry both.
+     *
+     * @param Grant[]       $grants
+     * @param list<?string> $audience
+     */
+    public static function createPublisherTokenProvider(TokenFactoryInterface $factory, array $grants, array $audience): FactoryTokenProvider
+    {
+        $audience = array_values(array_unique(array_filter($audience, static fn (?string $url): bool => null !== $url && '' !== $url)));
+
+        return new FactoryTokenProvider($factory, $grants, match (\count($audience)) {
+            0 => [],
+            1 => ['aud' => $audience[0]],
+            default => ['aud' => $audience],
+        });
     }
 }
