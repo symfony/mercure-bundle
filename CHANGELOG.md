@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.6.1
+-----
+
+* Add `url` to the default `aud` claim of protocol 1.0 publisher tokens, which are sent there: a hub reached through different internal and public URLs no longer needs `resource_identifier` to accept publications
+
 0.6.0
 -----
 

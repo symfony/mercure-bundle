@@ -737,6 +737,147 @@ final class MercureExtensionTest extends TestCase
         );
     }
 
+    public function testV1HubPublisherAudienceIncludesTheHubUrl()
+    {
+        if (!class_exists(Key\InMemory::class)) {
+            $this->markTestSkipped('requires lcobucci/jwt.');
+        }
+
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'http://mercure/.well-known/mercure',
+                        'public_url' => 'https://example.com/.well-known/mercure',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+        $container->getDefinition(HubRegistry::class)->setPublic(true);
+        $container->compile();
+
+        $hub = $container->get(HubRegistry::class)->getHub();
+        $audience = static fn (string $jwt): mixed => json_decode(base64_decode(strtr(explode('.', $jwt)[1], '-_', '+/'), true), true)['aud'];
+
+        $this->assertSame(['http://mercure/.well-known/mercure', 'https://example.com/.well-known/mercure'], $audience($hub->getProvider()->getJwt()));
+        $this->assertSame('https://example.com/.well-known/mercure', $audience($hub->getFactory()->create()));
+    }
+
+    /**
+     * @dataProvider splitPublisherSubscriberSecretsProvider
+     */
+    public function testV1SplitPublisherSubscriberAudiences(string $subscriberSecret)
+    {
+        if (!class_exists(Key\InMemory::class)) {
+            $this->markTestSkipped('requires lcobucci/jwt.');
+        }
+
+        $claims = ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'];
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'http://mercure/.well-known/mercure',
+                        'public_url' => 'https://example.com/.well-known/mercure',
+                        'protocol_version' => '1.0',
+                        'publisher' => ['secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!', 'claims' => $claims, 'topics' => ['*']],
+                        'subscriber' => ['secret' => $subscriberSecret, 'claims' => $claims],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+        $container->getDefinition(HubRegistry::class)->setPublic(true);
+        $container->compile();
+
+        $hub = $container->get(HubRegistry::class)->getHub();
+        $audience = static fn (string $jwt): mixed => json_decode(base64_decode(strtr(explode('.', $jwt)[1], '-_', '+/'), true), true)['aud'];
+
+        $this->assertSame(['http://mercure/.well-known/mercure', 'https://example.com/.well-known/mercure'], $audience($hub->getProvider()->getJwt()));
+        $this->assertSame('https://example.com/.well-known/mercure', $audience($hub->getFactory()->create()));
+    }
+
+    public static function splitPublisherSubscriberSecretsProvider(): iterable
+    {
+        yield 'shared factory' => ['!ChangeMe!ChangeMe!ChangeMe!ChangeMe!'];
+        yield 'separate factories' => ['!Subscriber!Subscriber!Subscriber!'];
+    }
+
+    public function testV1PublisherKeepsAnExplicitAudience()
+    {
+        $claims = ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com'];
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'http://mercure/.well-known/mercure',
+                        'protocol_version' => '1.0',
+                        'publisher' => ['secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!', 'claims' => $claims + ['aud' => 'https://example.com/hub']],
+                        'subscriber' => ['secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!', 'claims' => $claims],
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertNull($container->getDefinition('mercure.hub.default.jwt.provider')->getFactory());
+    }
+
+    public function testV1HubPublisherKeepsAnExplicitAudience()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'http://mercure/.well-known/mercure',
+                        'jwt' => [
+                            'secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!',
+                            'claims' => ['iss' => 'https://example.com', 'sub' => 'https://example.com', 'client_id' => 'https://example.com', 'aud' => 'https://example.com/hub'],
+                        ],
+                        'protocol_version' => '1.0',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertNull($container->getDefinition('mercure.hub.default.jwt.provider')->getFactory());
+    }
+
+    public function testLegacyHubPublisherHasNoAudience()
+    {
+        $config = [
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'http://mercure/.well-known/mercure',
+                        'jwt' => ['secret' => '!ChangeMe!ChangeMe!ChangeMe!ChangeMe!'],
+                        'protocol_version' => '0.x',
+                    ],
+                ],
+            ],
+        ];
+
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load($config, $container);
+
+        $this->assertNull($container->getDefinition('mercure.hub.default.jwt.provider')->getFactory());
+    }
+
     public function testV1HubFactoryIncludesDefaultClaimsForDirectCallers()
     {
         if (!class_exists(Key\InMemory::class)) {

@@ -18,6 +18,7 @@ use Symfony\Bundle\MercureBundle\HubFactory;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
+use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\ProtocolVersion;
 
 final class HubFactoryTest extends TestCase
@@ -103,5 +104,36 @@ final class HubFactoryTest extends TestCase
         $this->expectExceptionMessage('set the "public_url" option');
 
         HubFactory::create(null, null, null, null, null, null, ProtocolVersion::Legacy);
+    }
+
+    /**
+     * @dataProvider publisherAudienceProvider
+     *
+     * @param list<?string> $audience
+     */
+    public function testPublisherTokenAudience(array $audience, string|array|null $expected)
+    {
+        $factory = new class implements TokenFactoryInterface {
+            public array $claims = [];
+
+            public function create(array $grants = [], array $additionalClaims = []): string
+            {
+                $this->claims = $additionalClaims;
+
+                return 'foo.bar.baz';
+            }
+        };
+
+        HubFactory::createPublisherTokenProvider($factory, [], $audience)->getJwt();
+
+        $this->assertSame($expected, $factory->claims['aud'] ?? null);
+    }
+
+    public static function publisherAudienceProvider(): iterable
+    {
+        yield 'same URLs' => [['https://example.com/.well-known/mercure', 'https://example.com/.well-known/mercure'], 'https://example.com/.well-known/mercure'];
+        yield 'internal and public URLs' => [['http://mercure/.well-known/mercure', 'https://example.com/.well-known/mercure'], ['http://mercure/.well-known/mercure', 'https://example.com/.well-known/mercure']];
+        yield 'unset public URL' => [['http://mercure/.well-known/mercure', null], 'http://mercure/.well-known/mercure'];
+        yield 'empty URLs' => [['', null], null];
     }
 }
