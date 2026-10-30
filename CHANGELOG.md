@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.7.0
+-----
+
+* Clear the subscriber authorization cookie of every hub on logout (`LogoutEvent`) when `symfony/security-http` is installed, so the browser can no longer subscribe to the private topics of the user who logged out; disable it with `clear_cookie_on_logout: false`. A token already copied out of the cookie, or an EventSource that is already open, stays valid until the token's `exp`: keep subscriber token lifetimes short (#85)
+
 0.6.1
 -----
 
