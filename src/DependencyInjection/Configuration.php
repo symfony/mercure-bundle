@@ -58,12 +58,7 @@ final class Configuration implements ConfigurationInterface
             ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
         ->end()
                             ->end()
-                            // rules spanning several options of the hub; each of "jwt", "publisher"
-                            // and "subscriber" validates its own options, see their node methods
-                            ->validate()
-                                ->ifTrue(static fn (array $v): bool => isset($v['jwt'], $v['jwt_provider']))
-                                ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
-                            ->end()
+                            // "jwt", "publisher" and "subscriber" validate their own options
                             ->validate()
                                 ->ifTrue(static fn (array $v): bool => (isset($v['jwt']) || isset($v['jwt_provider'])) && (isset($v['publisher']) || isset($v['subscriber'])))
                                 ->thenInvalid('"jwt"/"jwt_provider" and "publisher"/"subscriber" cannot be used together.')
@@ -71,6 +66,10 @@ final class Configuration implements ConfigurationInterface
                             ->validate()
                                 ->ifTrue(static fn (array $v): bool => isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']) && !isset($v['publisher']))
                                 ->thenInvalid('You must specify at least one of "publisher", "jwt", and "jwt_provider".')
+                            ->end()
+                            ->validate()
+                                ->ifTrue(static fn (array $v): bool => isset($v['jwt'], $v['jwt_provider']))
+                                ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
                             ->end()
                             ->validate()
                                 ->ifTrue(static fn (array $v): bool => ProtocolVersion::V1 !== $v['protocol_version'])
@@ -184,9 +183,6 @@ final class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    /**
-     * Fails when none of $options is set on the $name node.
-     */
     private function requireOneOf(ArrayNodeDefinition $node, string $name, string ...$options): void
     {
         $quoted = array_map(static fn (string $option): string => \sprintf('"%s.%s"', $name, $option), $options);
@@ -199,9 +195,6 @@ final class Configuration implements ConfigurationInterface
             ->end();
     }
 
-    /**
-     * Fails when both $option and $otherOption are set on the $name node.
-     */
     private function forbidTogether(ArrayNodeDefinition $node, string $name, string $option, string $otherOption): void
     {
         $node
