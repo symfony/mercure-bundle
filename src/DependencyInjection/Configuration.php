@@ -58,57 +58,30 @@ final class Configuration implements ConfigurationInterface
             ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
         ->end()
                             ->end()
+                            // "jwt", "publisher" and "subscriber" validate their own options
                             ->validate()
-        ->ifTrue(static fn (array $v): bool => (isset($v['jwt']) || isset($v['jwt_provider'])) && (isset($v['publisher']) || isset($v['subscriber'])))
-        ->thenInvalid('"jwt"/"jwt_provider" and "publisher"/"subscriber" cannot be used together.')
+                                ->ifTrue(static fn (array $v): bool => (isset($v['jwt']) || isset($v['jwt_provider'])) && (isset($v['publisher']) || isset($v['subscriber'])))
+                                ->thenInvalid('"jwt"/"jwt_provider" and "publisher"/"subscriber" cannot be used together.')
                             ->end()
                             ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']) && !isset($v['publisher']))
-        ->thenInvalid('You must specify at least one of "publisher", "jwt", and "jwt_provider".')
+                                ->ifTrue(static fn (array $v): bool => isset($v['url']) && !isset($v['jwt']) && !isset($v['jwt_provider']) && !isset($v['publisher']))
+                                ->thenInvalid('You must specify at least one of "publisher", "jwt", and "jwt_provider".')
                             ->end()
                             ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['jwt'], $v['jwt_provider']))
-        ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
+                                ->ifTrue(static fn (array $v): bool => isset($v['jwt'], $v['jwt_provider']))
+                                ->thenInvalid('"jwt" and "jwt_provider" cannot be used together.')
                             ->end()
                             ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['jwt']['value'], $v['jwt']['provider']))
-        ->thenInvalid('"jwt.value" and "jwt.provider" cannot be used together.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['jwt']) && !isset($v['jwt']['value']) && !isset($v['jwt']['provider']) && !isset($v['jwt']['factory']) && !isset($v['jwt']['secret']) && !isset($v['jwt']['jwks_uri']))
-        ->thenInvalid('You must specify at least one of "jwt.value", "jwt.provider", "jwt.factory", "jwt.secret", and "jwt.jwks_uri".')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['jwt']['secret'], $v['jwt']['jwks_uri']))
-        ->thenInvalid('"jwt.secret" and "jwt.jwks_uri" cannot be used together.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['jwt']['jwks_uri']) && ProtocolVersion::V1 !== $v['protocol_version'])
-        ->thenInvalid('"jwt.jwks_uri" requires "protocol_version: 1.0", as it is only supported by WebTokenFactory.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['publisher']) && !isset($v['publisher']['value']) && !isset($v['publisher']['provider']) && !isset($v['publisher']['factory']) && !isset($v['publisher']['secret']) && !isset($v['publisher']['jwks_uri']))
-        ->thenInvalid('You must specify at least one of "publisher.value", "publisher.provider", "publisher.factory", "publisher.secret", and "publisher.jwks_uri".')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['publisher']['value'], $v['publisher']['provider']))
-        ->thenInvalid('"publisher.value" and "publisher.provider" cannot be used together.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['publisher']['secret'], $v['publisher']['jwks_uri']))
-        ->thenInvalid('"publisher.secret" and "publisher.jwks_uri" cannot be used together.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['subscriber']) && !isset($v['subscriber']['factory']) && !isset($v['subscriber']['secret']) && !isset($v['subscriber']['jwks_uri']))
-        ->thenInvalid('You must specify at least one of "subscriber.factory", "subscriber.secret", and "subscriber.jwks_uri".')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => isset($v['subscriber']['secret'], $v['subscriber']['jwks_uri']))
-        ->thenInvalid('"subscriber.secret" and "subscriber.jwks_uri" cannot be used together.')
-                            ->end()
-                            ->validate()
-        ->ifTrue(static fn (array $v): bool => (isset($v['publisher']['jwks_uri']) || isset($v['subscriber']['jwks_uri'])) && ProtocolVersion::V1 !== $v['protocol_version'])
-        ->thenInvalid('"publisher.jwks_uri"/"subscriber.jwks_uri" require "protocol_version: 1.0", as they are only supported by WebTokenFactory.')
+                                ->ifTrue(static fn (array $v): bool => ProtocolVersion::V1 !== $v['protocol_version'])
+                                ->then(static function (array $v): array {
+                                    foreach (['jwt', 'publisher', 'subscriber'] as $key) {
+                                        if (isset($v[$key]['jwks_uri'])) {
+                                            throw new \InvalidArgumentException(\sprintf('"%s.jwks_uri" requires "protocol_version: 1.0", as it is only supported by WebTokenFactory.', $key));
+                                        }
+                                    }
+
+                                    return $v;
+                                })
                             ->end()
                         ->end()
                     ->end()
@@ -137,7 +110,10 @@ final class Configuration implements ConfigurationInterface
                     ->info('A list of topics to allow publishing to when using the given factory to generate the JWT.')
                 ->end();
 
-        return $this->addSigningNodes($node);
+        $this->forbidTogether($node, 'publisher', 'value', 'provider');
+        $this->requireOneOf($node, 'publisher', 'value', 'provider', 'factory', 'secret', 'jwks_uri');
+
+        return $this->addSigningNodes($node, 'publisher');
     }
 
     private function subscriberNode(): ArrayNodeDefinition
@@ -148,7 +124,9 @@ final class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('factory')->info('The ID of a service implementing TokenFactoryInterface, used to create the JSON Web Tokens.')->end();
 
-        return $this->addSigningNodes($node);
+        $this->requireOneOf($node, 'subscriber', 'factory', 'secret', 'jwks_uri');
+
+        return $this->addSigningNodes($node, 'subscriber');
     }
 
     private function jwtNode(): ArrayNodeDefinition
@@ -177,11 +155,16 @@ final class Configuration implements ConfigurationInterface
                     ->info('A list of topics to allow subscribing to when using the given factory to generate the JWT.')
                 ->end();
 
-        return $this->addSigningNodes($node);
+        $this->forbidTogether($node, 'jwt', 'value', 'provider');
+        $this->requireOneOf($node, 'jwt', 'value', 'provider', 'factory', 'secret', 'jwks_uri');
+
+        return $this->addSigningNodes($node, 'jwt');
     }
 
-    private function addSigningNodes(ArrayNodeDefinition $node): ArrayNodeDefinition
+    private function addSigningNodes(ArrayNodeDefinition $node, string $name): ArrayNodeDefinition
     {
+        $this->forbidTogether($node, $name, 'secret', 'jwks_uri');
+
         $node
             ->children()
                 ->scalarNode('secret')->info('The JWT Secret to use.')->example('!ChangeMe!')->end()
@@ -198,6 +181,27 @@ final class Configuration implements ConfigurationInterface
             ->end();
 
         return $node;
+    }
+
+    private function requireOneOf(ArrayNodeDefinition $node, string $name, string ...$options): void
+    {
+        $quoted = array_map(static fn (string $option): string => \sprintf('"%s.%s"', $name, $option), $options);
+        $last = array_pop($quoted);
+
+        $node
+            ->validate()
+                ->ifTrue(static fn (array $v): bool => [] === array_filter($options, static fn (string $option): bool => isset($v[$option])))
+                ->thenInvalid(\sprintf('You must specify at least one of %s, and %s.', implode(', ', $quoted), $last))
+            ->end();
+    }
+
+    private function forbidTogether(ArrayNodeDefinition $node, string $name, string $option, string $otherOption): void
+    {
+        $node
+            ->validate()
+                ->ifTrue(static fn (array $v): bool => isset($v[$option], $v[$otherOption]))
+                ->thenInvalid(\sprintf('"%1$s.%2$s" and "%1$s.%3$s" cannot be used together.', $name, $option, $otherOption))
+            ->end();
     }
 
     private function protocolVersionNode(): EnumNodeDefinition
