@@ -27,9 +27,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Builds the hub services that depend on "url" and "public_url" at runtime, once they are resolved.
  *
  * This cannot be done while the container is built: "url" usually comes from an
- * environment variable, which is still an unresolved placeholder at that point, and
- * FrankenPHP only defines mercure_publish() when serving a request, not under the CLI
- * running cache:clear.
+ * environment variable, which is still an unresolved placeholder at that point.
  *
  * @internal
  */
@@ -56,10 +54,7 @@ final class HubFactory
             return new Hub($url, $tokenProvider, $tokenFactory, $publicUrl, $httpClient, $cookieName, $protocolVersion);
         }
 
-        if (!\function_exists('mercure_publish')) {
-            throw new \LogicException('No "url" is configured for this hub, which selects FrankenPHP\'s built-in Mercure hub, but the mercure_publish() function it publishes through is not available. Enable the "mercure" directive of your FrankenPHP server, or set the "url" option to the hub to publish to.');
-        }
-
+        // mercure_publish() isn't checked: hubs are also built under the CLI, where FrankenPHP doesn't define it
         if (null === $publicUrl || '' === $publicUrl) {
             throw new \LogicException('FrankenPHP\'s built-in Mercure hub needs the URL browsers subscribe to: set the "public_url" option.');
         }
