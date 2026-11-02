@@ -40,6 +40,7 @@
     },
     "require-dev": {
         "symfony/phpunit-bridge": "^7.3.4|^8.0",
+        "symfony/security-http": "^6.4|^7.3|^8.0",
         "symfony/stopwatch": "^6.4|^7.3|^8.0",
         "symfony/ux-turbo": "*",
         "symfony/var-dumper": "^6.4|^7.3|^8.0",
@@ -47,6 +48,7 @@
     },
     "suggest": {
         "symfony/messenger": "To use the Messenger integration",
+        "symfony/security-http": "To clear the subscriber authorization cookie on logout",
         "web-token/jwt-library": "To build Mercure protocol 1.0-compatible JSON Web Tokens from a \"jwt.jwks_uri\" option"
     },
     "minimum-stability": "dev"

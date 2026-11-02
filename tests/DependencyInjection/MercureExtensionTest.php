@@ -16,6 +16,7 @@ namespace Symfony\Bundle\MercureBundle\Tests\DependencyInjection;
 use Lcobucci\JWT\Signer\Key;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
+use Symfony\Bundle\MercureBundle\EventListener\ClearSubscriberCookieOnLogoutListener;
 use Symfony\Bundle\MercureBundle\HubFactory;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -30,6 +31,7 @@ use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\Jwt\WebTokenFactory;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\RemoteHubInterface;
+use Symfony\Component\Security\Http\Event\LogoutEvent;
 
 /**
  * @author Kévin Dunglas <dunglas@gmail.com>
@@ -1205,5 +1207,47 @@ final class MercureExtensionTest extends TestCase
         $this->assertSame('.lazy.mercure.hub.default.jwt.factory', (string) $container->getDefinition('mercure.hub.default.jwt.provider')->getArgument(0));
         $this->assertSame('.lazy.mercure.hub.default.jwt.factory', (string) $container->getDefinition('mercure.hub.default')->getArgument(2));
         $this->assertArrayHasKey('Symfony\Component\Mercure\Jwt\TokenFactoryInterface $default', $container->getAliases());
+    }
+
+    public function testClearsTheSubscriberCookieOnLogoutByDefault()
+    {
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load([
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+            ],
+        ], $container);
+
+        $this->assertTrue($container->hasDefinition(ClearSubscriberCookieOnLogoutListener::class));
+        $this->assertSame(
+            [
+                ['event' => LogoutEvent::class, 'method' => 'onLogout'],
+                ['event' => 'kernel.response', 'method' => 'onKernelResponse', 'priority' => -20],
+            ],
+            $container->getDefinition(ClearSubscriberCookieOnLogoutListener::class)->getTag('kernel.event_listener')
+        );
+    }
+
+    public function testClearCookieOnLogoutCanBeDisabled()
+    {
+        $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => false]));
+        (new MercureExtension())->load([
+            'mercure' => [
+                'hubs' => [
+                    'default' => [
+                        'url' => 'https://demo.mercure.rocks/hub',
+                        'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.HB0k08BaV8KlLZ3EafCRlTDGbkd9qdznCzJQ_l8ELTU',
+                    ],
+                ],
+                'clear_cookie_on_logout' => false,
+            ],
+        ], $container);
+
+        $this->assertFalse($container->hasDefinition(ClearSubscriberCookieOnLogoutListener::class));
     }
 }

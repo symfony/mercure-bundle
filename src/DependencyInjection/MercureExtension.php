@@ -15,15 +15,18 @@ namespace Symfony\Bundle\MercureBundle\DependencyInjection;
 
 use Jose\Component\Core\JWK;
 use Symfony\Bundle\MercureBundle\DataCollector\MercureDataCollector;
+use Symfony\Bundle\MercureBundle\EventListener\ClearSubscriberCookieOnLogoutListener;
 use Symfony\Bundle\MercureBundle\HubFactory;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Mercure\Authorization;
 use Symfony\Component\Mercure\Debug\TraceableHub;
 use Symfony\Component\Mercure\Discovery;
@@ -43,6 +46,7 @@ use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\RemoteHubInterface;
 use Symfony\Component\Mercure\Twig\MercureExtension as TwigMercureExtension;
+use Symfony\Component\Security\Http\Event\LogoutEvent;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\UX\Turbo\Bridge\Mercure\Broadcaster;
 use Symfony\UX\Turbo\Bridge\Mercure\TurboStreamListenRenderer;
@@ -237,6 +241,15 @@ final class MercureExtension extends Extension
         if (class_exists(SetCookieSubscriber::class)) {
             $container->register(SetCookieSubscriber::class)
                 ->addTag('kernel.event_subscriber', ['priority' => -10]);
+        }
+
+        if ($config['clear_cookie_on_logout'] && class_exists(LogoutEvent::class)) {
+            $container->register(ClearSubscriberCookieOnLogoutListener::class)
+                // lazy, so that the response listener doesn't build every hub on every request
+                ->setArguments([new ServiceClosureArgument(new Reference(HubRegistry::class)), new ServiceClosureArgument(new Reference(Authorization::class))])
+                ->addTag('kernel.event_listener', ['event' => LogoutEvent::class, 'method' => 'onLogout'])
+                // after SetCookieSubscriber (-10), so a cookie set during the logout request can't survive it
+                ->addTag('kernel.event_listener', ['event' => KernelEvents::RESPONSE, 'method' => 'onKernelResponse', 'priority' => -20]);
         }
 
         if (class_exists(Environment::class) && class_exists(TwigMercureExtension::class)) {
