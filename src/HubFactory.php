@@ -54,9 +54,7 @@ final class HubFactory
             return new Hub($url, $tokenProvider, $tokenFactory, $publicUrl, $httpClient, $cookieName, $protocolVersion);
         }
 
-        // No mercure_publish() check here: FrankenPHP only defines it when serving a request,
-        // while HubRegistry creates every hub, also under the CLI (e.g. for the Twig extension
-        // during cache:warmup). FrankenPhpHub::publish() reports it missing instead.
+        // mercure_publish() isn't checked: hubs are also built under the CLI, where FrankenPHP doesn't define it
         if (null === $publicUrl || '' === $publicUrl) {
             throw new \LogicException('FrankenPHP\'s built-in Mercure hub needs the URL browsers subscribe to: set the "public_url" option.');
         }
