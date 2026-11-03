@@ -5,6 +5,9 @@ CHANGELOG
 -----
 
 * Clear the subscriber authorization cookie of every hub on logout (`LogoutEvent`) when `symfony/security-http` is installed, so the browser can no longer subscribe to the private topics of the user who logged out; disable it with `clear_cookie_on_logout: false`. A token already copied out of the cookie, or an EventSource that is already open, stays valid until the token's `exp`: keep subscriber token lifetimes short (#85)
+* Fix FrankenPHP's built-in hub failing to be created under the CLI (e.g. during `cache:warmup`), where `mercure_publish()` isn't defined; publishing through it there now throws an explicit exception from `symfony/mercure`, which is now required in `^0.9` (#136)
+* Allow `symfony/mercure` `^0.10`
+* Report invalid `jwt`, `publisher` and `subscriber` options at the path of the node at fault (e.g. `mercure.hubs.default.publisher` instead of `mercure.hubs.default`), and name the option actually set in the `jwks_uri` protocol version error (#135)
 
 0.6.1
 -----
