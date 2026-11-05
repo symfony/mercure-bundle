@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.8.0
+-----
+
+* Record the updates instead of publishing them when `framework.test` is enabled, and add `MercureAssertionsTrait` (`assertMercureUpdateCount()`, `assertMercureUpdatePublished()`, `getMercureUpdates()`, `getMercureUpdate()`) to test them from a `KernelTestCase` or a `WebTestCase` (#138)
+
 0.7.0
 -----
 
