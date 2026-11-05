@@ -64,6 +64,7 @@ final class ConfigurationTest extends TestCase
 
         $this->assertSame(ProtocolVersion::V1, $config['hubs']['default']['protocol_version']);
         $this->assertNull($config['hubs']['default']['cookie_name']);
+        $this->assertTrue($config['hubs']['default']['record_updates_in_test']);
     }
 
     public function testProtocolVersionAcceptsExplicit10()

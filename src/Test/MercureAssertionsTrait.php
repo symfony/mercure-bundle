@@ -54,7 +54,7 @@ trait MercureAssertionsTrait
     {
         $container = static::getContainer();
         if (!$container->has('mercure.test.update_recorder')) {
-            static::fail('Mercure updates are only recorded when "framework.test" is enabled and at least one hub is configured.');
+            static::fail('Mercure updates are only recorded when "framework.test" is enabled and at least one hub has its "record_updates_in_test" option enabled.');
         }
 
         return $container->get('mercure.test.update_recorder')->getUpdates($hub);

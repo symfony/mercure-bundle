@@ -78,7 +78,7 @@ final class MercureAssertionsTraitTest extends TestCase
     public function testUnknownHubThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The "unknown" Mercure hub is not defined. Defined hubs: "default", "other".');
+        $this->expectExceptionMessage('The "unknown" Mercure hub does not record its updates: it is not defined or its "record_updates_in_test" option is disabled. Recording hubs: "default", "other".');
 
         self::getMercureUpdates('unknown');
     }

@@ -44,14 +44,14 @@ final class UpdateRecorder implements ResetInterface
     }
 
     /**
-     * @throws \InvalidArgumentException when the hub is not defined
+     * @throws \InvalidArgumentException when the hub doesn't record its updates
      *
      * @return list<Update> the updates of the given hub, or of all the hubs when null, in publishing order
      */
     public function getUpdates(?string $hub = null): array
     {
         if (null !== $hub && !\in_array($hub, $this->hubs, true)) {
-            throw new \InvalidArgumentException(\sprintf('The "%s" Mercure hub is not defined. Defined hubs: "%s".', $hub, implode('", "', $this->hubs)));
+            throw new \InvalidArgumentException(\sprintf('The "%s" Mercure hub does not record its updates: it is not defined or its "record_updates_in_test" option is disabled. Recording hubs: "%s".', $hub, implode('", "', $this->hubs)));
         }
 
         $updates = [];

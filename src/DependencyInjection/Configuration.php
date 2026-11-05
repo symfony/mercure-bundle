@@ -57,6 +57,10 @@ final class Configuration implements ConfigurationInterface
             ->defaultNull()
             ->info('Name of the subscriber authorization cookie. Defaults to a value computed from "protocol_version" when not set: "__Secure-mercure_access_token" for "1.0" ("mercure_access_token" in debug mode, matching the hub\'s "playground" mode), "mercureAuthorization" for "0.x".')
         ->end()
+        ->booleanNode('record_updates_in_test')
+            ->defaultTrue()
+            ->info('Record the updates instead of publishing them when "framework.test" is enabled, to test them with MercureAssertionsTrait. Disable it for end-to-end tests that need a real hub, e.g. with Symfony Panther.')
+        ->end()
                             ->end()
                             // "jwt", "publisher" and "subscriber" validate their own options
                             ->validate()

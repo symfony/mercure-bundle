@@ -37,7 +37,7 @@ final class RecordUpdatesPass implements CompilerPassInterface
 
         $hubs = [];
         foreach ($container->findTaggedServiceIds('mercure.hub') as $hubId => $tags) {
-            if (!str_starts_with($hubId, 'mercure.hub.')) {
+            if (!str_starts_with($hubId, 'mercure.hub.') || !($tags[0]['record_updates_in_test'] ?? true)) {
                 continue;
             }
 

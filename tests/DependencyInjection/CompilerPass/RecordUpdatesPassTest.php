@@ -71,12 +71,38 @@ final class RecordUpdatesPassTest extends TestCase
         $this->assertCount(1, $container->get('mercure.test.update_recorder')->getUpdates('default'));
     }
 
-    private function createContainer(bool $test, bool $debug): ContainerBuilder
+    public function testHubsCanOptOut()
+    {
+        $container = $this->createContainer(true, false, ['record_updates_in_test' => false]);
+        $container->compile();
+
+        $this->assertInstanceOf(RecordingHub::class, $container->get('mercure.hub.default'));
+        $this->assertNotInstanceOf(RecordingHub::class, $container->get('mercure.hub.other'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recording hubs: "default".');
+        $container->get('mercure.test.update_recorder')->getUpdates('other');
+    }
+
+    public function testNoRecorderWhenEveryHubOptsOut()
+    {
+        $container = $this->createContainer(true, false, ['record_updates_in_test' => false], ['record_updates_in_test' => false]);
+        $container->compile();
+
+        $this->assertFalse($container->has('mercure.test.update_recorder'));
+        $this->assertNotInstanceOf(RecordingHub::class, $container->get('mercure.hub.default'));
+    }
+
+    /**
+     * @param array<string, mixed> $otherHub
+     * @param array<string, mixed> $defaultHub
+     */
+    private function createContainer(bool $test, bool $debug, array $otherHub = [], array $defaultHub = []): ContainerBuilder
     {
         $container = new ContainerBuilder(new ParameterBag(['kernel.debug' => $debug]));
         (new MercureExtension())->load(['mercure' => ['hubs' => [
-            'default' => ['url' => 'https://demo.mercure.rocks/hub', 'jwt' => 'token'],
-            'other' => ['url' => 'https://other.example.com/hub', 'jwt' => 'token'],
+            'default' => ['url' => 'https://demo.mercure.rocks/hub', 'jwt' => 'token'] + $defaultHub,
+            'other' => ['url' => 'https://other.example.com/hub', 'jwt' => 'token'] + $otherHub,
         ]]], $container);
 
         // any request would fail the test: nothing must reach the hub
