@@ -157,7 +157,7 @@ final class MercureExtension extends Extension
                 ->addArgument(isset($hub['http_client']) ? new Reference($hub['http_client']) : new Reference('http_client', ContainerInterface::IGNORE_ON_INVALID_REFERENCE))
                 ->addArgument($cookieName)
                 ->addArgument($protocolVersion)
-                ->addTag('mercure.hub');
+                ->addTag('mercure.hub', ['record_updates_in_test' => $hub['record_updates_in_test']]);
 
             $container->registerAliasForArgument($hubId, HubInterface::class, "{$name}Hub");
             $container->registerAliasForArgument($hubId, HubInterface::class, $name);

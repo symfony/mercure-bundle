@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.8.0
+-----
+
+* Record the updates instead of publishing them when `framework.test` is enabled, and add `MercureAssertionsTrait` (`assertMercureUpdateCount()`, `assertMercureUpdatePublished()`, `getMercureUpdates()`, `getMercureUpdate()`) to test them from a `KernelTestCase` or a `WebTestCase` (#138). **Behavior change:** end-to-end tests that need a real hub in the test environment, e.g. with Symfony Panther, must set the new `record_updates_in_test` hub option to `false`
+
 0.7.0
 -----
 
